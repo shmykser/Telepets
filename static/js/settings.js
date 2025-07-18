@@ -60,7 +60,10 @@ const NORMAL_TEMP_MAX = 41;
 // ========================================
 
 // Время остывания яйца (в секундах)
-const COOLING_INTERVAL_SECONDS = 60; // 1 минута
+const COOLING_INTERVAL_SECONDS = 10; // 0 минута
+
+// Количество градусов, на которое остывает яйцо за один интервал
+const COOLING_DEGREES_PER_INTERVAL = 1;
 
 // Интервал обновления данных с сервера (в миллисекундах)
 const DATA_UPDATE_INTERVAL = 10000; // 10 секунд

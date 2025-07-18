@@ -10,6 +10,9 @@ class TemperatureService {
     constructor() {
         this.lastTemperature = null;
         this.isWarming = false;
+        this.coolingInterval = null;
+        this.lastTouchTime = null;
+        this.currentEggData = null;
     }
 
     /**
@@ -42,6 +45,9 @@ class TemperatureService {
                 // Обновляем локальные данные
                 currentEggData.temperature = result.temperature;
                 currentEggData.state = result.state || currentEggData.state;
+                
+                // Сбрасываем таймер охлаждения
+                this.resetCoolingTimer();
                 
                 // Обновляем отображение температуры
                 this.updateTemperatureDisplay(result.temperature);
@@ -139,10 +145,25 @@ class TemperatureService {
      * @param {number} temperature - Новая температура
      */
     updateTemperatureDisplay(temperature) {
-        const tempElement = document.getElementById('temperature');
-        if (tempElement) {
-            tempElement.textContent = this.formatTemperature(temperature);
+        // Обновляем все элементы с температурой на странице
+        const tempElements = document.querySelectorAll('[id*="temperature"], [class*="temperature"]');
+        
+        tempElements.forEach(element => {
+            if (element.textContent.includes('°C') || element.textContent.includes('🌡️')) {
+                element.textContent = this.formatTemperature(temperature);
+            }
+        });
+        
+        // Также обновляем элементы в основном контейнере яйца
+        const eggContainer = document.querySelector('.egg-container, #egg');
+        if (eggContainer) {
+            const tempInEgg = eggContainer.querySelector('[id*="temperature"], [class*="temperature"]');
+            if (tempInEgg) {
+                tempInEgg.textContent = this.formatTemperature(temperature);
+            }
         }
+        
+        console.log(`🌡️ Обновлена температура в интерфейсе: ${this.formatTemperature(temperature)}`);
     }
 
     /**
@@ -194,11 +215,96 @@ class TemperatureService {
     }
 
     /**
+     * Запуск автоматического охлаждения
+     * @param {Object} eggData - Данные яйца
+     */
+    startCooling(eggData) {
+        if (!eggData || eggData.state !== 'incubating') {
+            this.stopCooling();
+            return;
+        }
+        
+        this.currentEggData = eggData;
+        // Используем время из backend данных, если доступно
+        this.lastTouchTime = eggData.last_touch_time ? 
+            new Date(eggData.last_touch_time) : new Date();
+        
+        // Запускаем интервал охлаждения
+        this.coolingInterval = setInterval(() => {
+            this.applyCooling();
+        }, COOLING_INTERVAL_SECONDS * 1000);
+        
+        console.log(`❄️ Запущено автоматическое охлаждение каждые ${COOLING_INTERVAL_SECONDS} секунд`);
+    }
+    
+    /**
+     * Остановка автоматического охлаждения
+     */
+    stopCooling() {
+        if (this.coolingInterval) {
+            clearInterval(this.coolingInterval);
+            this.coolingInterval = null;
+            console.log('❄️ Автоматическое охлаждение остановлено');
+        }
+    }
+    
+    /**
+     * Применение охлаждения
+     */
+    applyCooling() {
+        if (!this.currentEggData || this.currentEggData.state !== 'incubating') {
+            return;
+        }
+        
+        // Проверяем, прошло ли достаточно времени с последнего прикосновения
+        const now = new Date();
+        const timeSinceTouch = (now - this.lastTouchTime) / 1000; // в секундах
+        
+        if (timeSinceTouch >= COOLING_INTERVAL_SECONDS) {
+            // Применяем охлаждение
+            const newTemperature = Math.max(1, this.currentEggData.temperature - COOLING_DEGREES_PER_INTERVAL);
+            
+            if (newTemperature !== this.currentEggData.temperature) {
+                this.currentEggData.temperature = newTemperature;
+                
+                // Обновляем отображение температуры в интерфейсе
+                this.updateTemperatureDisplay(newTemperature);
+                
+                console.log(`❄️ Охлаждение: ${this.currentEggData.temperature + COOLING_DEGREES_PER_INTERVAL}°C → ${newTemperature}°C`);
+                
+                // Проверяем уведомления о температуре
+                this.checkTemperatureNotifications(newTemperature);
+                
+                // Обновляем данные в основном приложении
+                if (window.telepetsApp && window.telepetsApp.currentEggData) {
+                    window.telepetsApp.currentEggData.temperature = newTemperature;
+                }
+                
+                // Обновляем прогресс если есть ProgressService
+                if (window.progressService && this.currentEggData) {
+                    window.progressService.updateProgress(this.currentEggData, this.currentEggData.ui_config || {});
+                }
+            }
+        }
+    }
+    
+    /**
+     * Сброс таймера охлаждения (при нагреве)
+     */
+    resetCoolingTimer() {
+        this.lastTouchTime = new Date();
+        console.log('🔥 Таймер охлаждения сброшен');
+    }
+    
+    /**
      * Сброс состояния сервиса
      */
     reset() {
         this.lastTemperature = null;
         this.isWarming = false;
+        this.stopCooling();
+        this.currentEggData = null;
+        this.lastTouchTime = null;
     }
 }
 

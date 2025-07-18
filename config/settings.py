@@ -43,7 +43,7 @@ NORMAL_TEMP_MAX = 41
 # ========================================
 
 # Интервал охлаждения яйца (в секундах)
-COOLING_INTERVAL_SECONDS = 60
+COOLING_INTERVAL_SECONDS = 10
 
 # Количество градусов, на которое остывает яйцо за один интервал
 COOLING_DEGREES_PER_INTERVAL = 1

@@ -229,6 +229,9 @@ def get_entity(user_id: int) -> Optional[Dict[str, Any]]:
         except json.JSONDecodeError:
             entity_data['state_data'] = {}
         
+        # Применяем автоматическое охлаждение
+        apply_cooling_to_entity(user_id)
+        
         # Проверяем автоматические переходы состояний
         new_state = EntityStateService.check_auto_transitions(entity_data)
         if new_state:
@@ -318,6 +321,56 @@ def update_entity_temperature(user_id: int, delta: int = 1) -> bool:
         ''', (delta, delta, delta, now, now, user_id))
         
         return c.rowcount > 0
+
+def apply_cooling_to_entity(user_id: int) -> bool:
+    """
+    Применить автоматическое охлаждение к яйцу
+    Работает только в состоянии incubating
+    """
+    from config.settings import COOLING_INTERVAL_SECONDS, COOLING_DEGREES_PER_INTERVAL
+    
+    with get_connection() as conn:
+        c = conn.cursor()
+        now = datetime.utcnow()
+        
+        # Получаем текущие данные яйца
+        c.execute('''
+            SELECT temperature, last_touch_time, state 
+            FROM entities 
+            WHERE user_id = ?
+        ''', (user_id,))
+        
+        row = c.fetchone()
+        if not row:
+            return False
+            
+        temperature, last_touch_time_str, state = row
+        
+        # Охлаждение работает только в состоянии incubating
+        if state != 'incubating':
+            return False
+        
+        # Проверяем, прошло ли достаточно времени с последнего прикосновения
+        if last_touch_time_str:
+            last_touch_time = datetime.fromisoformat(last_touch_time_str)
+            time_since_touch = (now - last_touch_time).total_seconds()
+            
+            # Если прошло больше интервала охлаждения, применяем охлаждение
+            if time_since_touch >= COOLING_INTERVAL_SECONDS:
+                # Применяем только одно охлаждение за раз (не накапливаем)
+                new_temperature = max(1, temperature - COOLING_DEGREES_PER_INTERVAL)
+                
+                # Обновляем температуру и сбрасываем last_touch_time
+                c.execute('''
+                    UPDATE entities 
+                    SET temperature = ?, last_touch_time = ?, updated_at = ?
+                    WHERE user_id = ?
+                ''', (new_temperature, now.isoformat(), now.isoformat(), user_id))
+                
+                conn.commit()
+                return True
+        
+        return False
 
 def increment_hatching_clicks(user_id: int) -> Dict[str, Any]:
     """Увеличить счетчик кликов при вылуплении"""

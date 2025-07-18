@@ -123,6 +123,36 @@ class TelepetsApp {
     async warmEgg() {
         try {
             this.logger.info('🔥 Warming egg...');
+            
+            // Используем TemperatureService для нагрева
+            if (window.temperatureService) {
+                const result = await window.temperatureService.warmEgg(this.userId, this.currentEggData);
+                
+                if (result.success) {
+                    // Обновляем данные
+                    this.currentEggData.temperature = result.temperature;
+                    this.currentEggData.state = result.state;
+                    window.currentEggData = this.currentEggData;
+                    
+                    this.logger.info('✅ Egg warmed via TemperatureService:', result);
+                    
+                    // Используем EggService для рендеринга
+                    if (window.eggService) {
+                        window.eggService.renderEgg(this.currentEggData, this.currentEggData.ui_config || {});
+                    } else {
+                        this.renderEgg(this.currentEggData);
+                    }
+                    
+                    // Обрабатываем таймер в зависимости от состояния
+                    this.handleTimerForState(this.currentEggData);
+                    
+                    return;
+                } else {
+                    throw new Error(result.error || 'Ошибка нагрева');
+                }
+            }
+            
+            // Fallback к старому методу
             const data = await window.apiService.warmEgg();
             
             if (data.error) {
@@ -137,7 +167,7 @@ class TelepetsApp {
             // Используем EggService для рендеринга
             if (window.eggService) {
                 window.eggService.renderEgg(data, data.ui_config || {});
-        } else {
+            } else {
                 this.renderEgg(data);
             }
             
@@ -534,6 +564,17 @@ class TelepetsApp {
         }
 
         const { state, time_remaining } = data;
+        
+        // Управление автоматическим охлаждением
+        if (window.temperatureService) {
+            if (state === 'incubating') {
+                // Запускаем охлаждение только в состоянии инкубации
+                window.temperatureService.startCooling(data);
+            } else {
+                // Останавливаем охлаждение в других состояниях
+                window.temperatureService.stopCooling();
+            }
+        }
         
         // Останавливаем таймер если яйцо мертво
         if (state === 'dead') {
