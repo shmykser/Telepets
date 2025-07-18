@@ -1,0 +1,30 @@
+{
+  "name": "Telepets - Виртуальный питомец",
+  "short_name": "Telepets",
+  "description": "Telegram WebApp для выращивания виртуального яйца",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#2481cc",
+  "background_color": "#ffffff",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "screenshots": [],
+  "shortcuts": [],
+  "lang": "ru",
+  "dir": "ltr"
+} 

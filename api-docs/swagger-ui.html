@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Telepets API Documentation" />
+  <title>Telepets API - Swagger UI</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+  <style>
+    body {
+      margin: 0;
+      background-color: #fafafa;
+    }
+    .swagger-ui .topbar {
+      background-color: #62a03f;
+    }
+    .swagger-ui .topbar .download-url-wrapper .select-label {
+      color: white;
+    }
+    .swagger-ui .topbar .download-url-wrapper input[type=text] {
+      border: 1px solid #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    .swagger-ui .topbar .download-url-wrapper .download-url-button {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 1px solid white;
+    }
+    .custom-header {
+      background: linear-gradient(90deg, #62a03f 0%, #4a7c30 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .custom-header h1 {
+      margin: 0;
+      font-size: 2em;
+      font-weight: 600;
+    }
+    .custom-header p {
+      margin: 10px 0 0 0;
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+    .info-section {
+      background: white;
+      padding: 20px;
+      margin: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .info-section h3 {
+      color: #62a03f;
+      margin-top: 0;
+    }
+    .endpoint-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+      margin: 15px 0;
+    }
+    .endpoint-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      border-left: 4px solid #62a03f;
+    }
+    .endpoint-card h4 {
+      margin: 0 0 10px 0;
+      color: #2c3e50;
+    }
+    .endpoint-card .method {
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: white;
+      font-size: 0.8em;
+    }
+    .method.get { background: #61affe; }
+    .method.post { background: #49cc90; }
+    .footer {
+      background: #2c3e50;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="custom-header">
+    <h1>🥚 Telepets API Documentation</h1>
+    <p>Документация API для Telegram WebApp игры по инкубации виртуальных яиц</p>
+  </div>
+
+  <div class="info-section">
+    <h3>📋 Обзор API</h3>
+    <p>Telepets API предоставляет эндпоинты для управления состоянием виртуальных яиц в Telegram WebApp. 
+    API поддерживает операции получения данных, нагрева, сброса состояния и получения обновлений в реальном времени.</p>
+    
+    <div class="endpoint-info">
+      <div class="endpoint-card">
+        <h4><span class="method get">GET</span> /api/egg/{user_id}</h4>
+        <p>Получение текущего состояния яйца пользователя</p>
+      </div>
+      <div class="endpoint-card">
+        <h4><span class="method get">GET</span> /api/egg/{user_id}/updates</h4>
+        <p>Server-Sent Events для обновлений в реальном времени</p>
+      </div>
+      <div class="endpoint-card">
+        <h4><span class="method post">POST</span> /api/egg/{user_id}/warm</h4>
+        <p>Нагрев яйца при выполнении свайпа</p>
+      </div>
+      <div class="endpoint-card">
+        <h4><span class="method post">POST</span> /api/egg/{user_id}/fix_egg</h4>
+        <p>Сброс яйца к начальному состоянию</p>
+      </div>
+    </div>
+
+    <h3>🛠️ Настройки для отладки</h3>
+    <ul>
+      <li><strong>Локальный сервер:</strong> http://localhost:5000</li>
+      <li><strong>Тестовый user_id:</strong> 273065571</li>
+      <li><strong>CORS:</strong> Настроен для локальной разработки</li>
+      <li><strong>Формат данных:</strong> JSON</li>
+    </ul>
+
+    <h3>🔍 Примеры использования</h3>
+    <p>Попробуйте следующие запросы для тестирования API:</p>
+    <ul>
+      <li><code>GET /api/egg/273065571</code> - получить данные тестового яйца</li>
+      <li><code>POST /api/egg/273065571/warm</code> - нагреть тестовое яйцо</li>
+      <li><code>POST /api/egg/273065571/fix_egg</code> - сбросить тестовое яйцо</li>
+    </ul>
+  </div>
+
+  <div id="swagger-ui"></div>
+
+  <div class="footer">
+    <p>Telepets API Documentation • Создано для отладки и тестирования</p>
+  </div>
+
+  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js" crossorigin></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js" crossorigin></script>
+  <script>
+    window.onload = () => {
+      // Определяем URL для спецификации API
+      const apiSpecUrl = window.location.href.replace('/swagger-ui.html', '/telepets-api.yaml');
+      
+      window.ui = SwaggerUIBundle({
+        url: apiSpecUrl,
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout",
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 1,
+        docExpansion: 'list',
+        operationsSorter: 'alpha',
+        tryItOutEnabled: true,
+        filter: true,
+        requestInterceptor: (request) => {
+          // Добавляем заголовки для CORS
+          request.headers['Accept'] = 'application/json';
+          request.headers['Content-Type'] = 'application/json';
+          
+          console.log('API Request:', request);
+          return request;
+        },
+        responseInterceptor: (response) => {
+          console.log('API Response:', response);
+          return response;
+        },
+        onComplete: () => {
+          console.log('Swagger UI загружен успешно');
+        },
+        validatorUrl: null, // Отключаем валидацию для локальной разработки
+      });
+    };
+  </script>
+</body>
+</html> 

@@ -1,0 +1,637 @@
+openapi: 3.0.0
+info:
+  title: Telepets API
+  description: |
+    **Entity-Based API для игры Telepets** 🎮
+    
+    Новая архитектура с поддержкой масштабируемого управления состояниями:
+    
+    ### 🥚 **Состояния яйца:**
+    - **incubating** - инкубация (поддержка температуры, свайпы)
+    - **hatching** - вылупление (клики по яйцу)  
+    - **dead** - мертвое (только сброс)
+    
+    ### 🔄 **Автоматические переходы:**
+    - `incubating` → `hatching` (по таймеру)
+    - `incubating` → `dead` (критическая температура)
+    - `hatching` → `dead` (тайм-аут)
+    - `hatching` → `hatched` (1000 кликов)
+    
+    ### 🚀 **Будущее развитие:**
+    Готовность к типу "creature" с состояниями: baby, teen, adult
+    
+  version: 2.0.0
+  contact:
+    name: Telepets API Support
+    url: https://t.me/telepets_bot
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+
+paths:
+  /api/egg/{user_id}:
+    get:
+      summary: Получить данные сущности
+      description: |
+        Возвращает полную информацию о сущности включая:
+        - 🎯 **Основные данные** (temperature, progress, time_remaining)
+        - 🎨 **UI конфигурацию** (что показывать/скрывать)
+        - ⚡ **Автоматические переходы** состояний
+        - 📊 **Специфичные данные** для каждого состояния
+        
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: Уникальный ID пользователя Telegram
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 273065571
+      responses:
+        '200':
+          description: Данные сущности успешно получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityData'
+        '400':
+          description: Некорректный user_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Сущность не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/egg/{user_id}/warm:
+    post:
+      summary: Нагреть яйцо (свайп)
+      description: |
+        **Доступно только в состоянии `incubating`**
+        
+        Имитирует свайп пользователя для нагрева яйца.
+        - ➕ Увеличивает температуру на 3°C
+        - 🛡️ Автоматическая защита от перегрева (max 50°C)
+        - ☠️ Переход в `dead` при критической температуре
+        
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: Уникальный ID пользователя Telegram
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 273065571
+      responses:
+        '200':
+          description: Яйцо успешно нагрето
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarmResponse'
+        '400':
+          description: Действие недоступно в текущем состоянии
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/egg/{user_id}/click:
+    post:
+      summary: Кликнуть по яйцу для вылупления
+      description: |
+        **Доступно только в состоянии `hatching`**
+        
+        Регистрирует клик пользователя для помощи в вылуплении:
+        - 👆 Увеличивает счетчик кликов
+        - 🌟 Показывает стадии трещин (100, 300, 600, 900 кликов)
+        - 🐣 Автоматический переход в `hatched` после 1000 кликов
+        
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: Уникальный ID пользователя Telegram
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 273065571
+      responses:
+        '200':
+          description: Клик успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClickResponse'
+        '400':
+          description: Действие недоступно в текущем состоянии
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/egg/{user_id}/fix_egg:
+    post:
+      summary: Сбросить яйцо к начальному состоянию
+      description: |
+        **Доступно только в состоянии `dead`**
+        
+        Полностью сбрасывает сущность к начальным параметрам:
+        - 🔄 Состояние → `incubating`
+        - 🌡️ Температура → 37°C
+        - ⏱️ Новый таймер инкубации
+        
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: Уникальный ID пользователя Telegram
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 273065571
+      responses:
+        '200':
+          description: Яйцо успешно сброшено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetResponse'
+        '400':
+          description: Действие недоступно в текущем состоянии
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/egg/{user_id}/set-parameters:
+    put:
+      summary: Установить параметры сущности (тестирование)
+      description: |
+        **🧪 Эндпоинт для тестирования и отладки**
+        
+        Позволяет установить произвольные параметры для тестирования:
+        - 🌡️ **temperature** - температура (1-50°C)
+        - ⏱️ **time_remaining** - оставшееся время в секундах
+        - ⚡ **state** - прямая установка состояния
+        
+        Все параметры опциональные, можно задавать любую комбинацию.
+        
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: Уникальный ID пользователя Telegram
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 273065571
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetParametersRequest'
+            examples:
+              temperature_only:
+                summary: Установить только температуру
+                value:
+                  temperature: 25
+              time_only:
+                summary: Установить только время
+                value:
+                  time_remaining: 3600
+              state_only:
+                summary: Установить только состояние
+                value:
+                  state: "hatching"
+              all_parameters:
+                summary: Установить все параметры
+                value:
+                  temperature: 30
+                  time_remaining: 1800
+                  state: "incubating"
+      responses:
+        '200':
+          description: Параметры успешно обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetParametersResponse'
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/egg/{user_id}/updates:
+    get:
+      summary: Real-time обновления (Server-Sent Events)
+      description: |
+        **📡 Поток данных в реальном времени**
+        
+        Возвращает обновления каждые 2 секунды:
+        - 🔄 Автоматические переходы состояний
+        - 📊 Актуальный прогресс и таймеры
+        - 🎨 Изменения UI конфигурации
+        
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: Уникальный ID пользователя Telegram
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 273065571
+      responses:
+        '200':
+          description: Поток SSE событий
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-Sent Events stream
+
+components:
+  schemas:
+    EntityData:
+      type: object
+      required:
+        - user_id
+        - entity_type
+        - state
+        - temperature
+        - progress
+        - time_remaining
+        - ui_config
+      properties:
+        user_id:
+          type: integer
+          format: int64
+          description: ID пользователя Telegram
+          example: 273065571
+        entity_type:
+          type: string
+          description: Тип сущности
+          enum: ["egg", "creature"]
+          example: "egg"
+        state:
+          type: string
+          description: Текущее состояние сущности
+          enum: ["incubating", "hatching", "dead", "hatched"]
+          example: "incubating"
+        temperature:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Температура в градусах Цельсия
+          example: 37
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Прогресс в процентах
+          example: 45.8
+        time_remaining:
+          type: number
+          minimum: 0
+          description: Оставшееся время в секундах
+          example: 3847.2
+        formatted_time_remaining:
+          type: string
+          description: Форматированное время (ЧЧ:ММ:СС)
+          example: "1:04:07"
+        last_updated:
+          type: string
+          format: date-time
+          description: Время последнего обновления (ISO 8601)
+          example: "2024-01-15T14:30:45.123456"
+        ui_config:
+          $ref: '#/components/schemas/UIConfig'
+        message:
+          type: string
+          description: Сообщение для пользователя
+          example: "Поддерживайте температуру свайпами!"
+        
+        # Поля для состояния hatching
+        hatching_clicks:
+          type: integer
+          minimum: 0
+          description: Количество кликов при вылуплении (только для hatching)
+          example: 250
+        required_clicks:
+          type: integer
+          description: Необходимое количество кликов (только для hatching)
+          example: 1000
+        clicks_remaining:
+          type: integer
+          description: Оставшееся количество кликов (только для hatching)
+          example: 750
+        crack_stage:
+          type: string
+          nullable: true
+          enum: ["small_crack", "medium_crack", "large_crack", "breaking"]
+          description: Стадия трещин на яйце (только для hatching)
+          example: "medium_crack"
+        hatching_time_remaining:
+          type: number
+          nullable: true
+          description: Время на вылупление в секундах (только для hatching)
+          example: 480.5
+        
+        # Поле для совместимости
+        status:
+          type: string
+          description: Псевдоним для state (для совместимости)
+          example: "incubating"
+
+    UIConfig:
+      type: object
+      description: Конфигурация UI компонентов для текущего состояния
+      properties:
+        show_temperature:
+          type: boolean
+          description: Показывать температуру
+          example: true
+        show_swipe_controls:
+          type: boolean  
+          description: Показывать контролы свайпов
+          example: true
+        show_click_controls:
+          type: boolean
+          description: Показывать контролы кликов
+          example: false
+        show_progress_bar:
+          type: boolean
+          description: Показывать прогресс бар
+          example: true
+        show_timer:
+          type: boolean
+          description: Показывать таймер
+          example: true
+        show_reset_button:
+          type: boolean
+          description: Показывать кнопку сброса
+          example: false
+        can_warm:
+          type: boolean
+          description: Можно нагревать
+          example: true
+        can_click:
+          type: boolean
+          description: Можно кликать
+          example: false
+        can_die_from_temperature:
+          type: boolean
+          description: Может умереть от температуры
+          example: true
+        has_animation:
+          type: boolean
+          description: Есть анимация
+          example: true
+        notification_message:
+          type: string
+          description: Сообщение уведомления
+          example: "Поддерживайте температуру свайпами!"
+        progress_label:
+          type: string
+          description: Подпись прогресс бара
+          example: "Прогресс инкубации"
+        timer_label:
+          type: string
+          description: Подпись таймера
+          example: "До вылупления"
+        available_actions:
+          type: array
+          items:
+            type: string
+          description: Доступные действия
+          example: ["swipe_warm"]
+
+    WarmResponse:
+      type: object
+      required:
+        - success
+        - message
+        - temperature
+        - state
+        - ui_config
+      properties:
+        success:
+          type: boolean
+          description: Успешность операции
+          example: true
+        message:
+          type: string
+          description: Сообщение о результате
+          example: "Яйцо нагрето!"
+        temperature:
+          type: integer
+          description: Новая температура
+          example: 40
+        state:
+          type: string
+          description: Текущее состояние
+          example: "incubating"
+        ui_config:
+          $ref: '#/components/schemas/UIConfig'
+
+    ClickResponse:
+      type: object
+      required:
+        - success
+        - click_result
+        - egg_data
+      properties:
+        success:
+          type: boolean
+          description: Успешность операции клика
+          example: true
+        click_result:
+          type: object
+          description: Результат клика по яйцу
+          properties:
+            success:
+              type: boolean
+              example: true
+            clicks:
+              type: integer
+              description: Текущее количество кликов
+              example: 251
+            required:
+              type: integer
+              description: Необходимое количество кликов
+              example: 1000
+            progress:
+              type: number
+              description: Прогресс в процентах
+              example: 25.1
+        egg_data:
+          type: object
+          description: Обновленные данные сущности
+          properties:
+            state:
+              type: string
+              example: "hatching"
+            hatching_clicks:
+              type: integer
+              example: 251
+            required_clicks:
+              type: integer
+              example: 1000
+            crack_stage:
+              type: string
+              nullable: true
+              example: "medium_crack"
+            progress:
+              type: number
+              example: 25.1
+            time_remaining:
+              type: number
+              example: 480.0
+            ui_config:
+              $ref: '#/components/schemas/UIConfig'
+
+    ResetResponse:
+      type: object
+      required:
+        - success
+        - message
+        - entity_data
+      properties:
+        success:
+          type: boolean
+          description: Успешность операции сброса
+          example: true
+        message:
+          type: string
+          description: Сообщение о результате
+          example: "Яйцо сброшено к начальному состоянию"
+        entity_data:
+          type: object
+          description: Данные сущности после сброса
+          properties:
+            state:
+              type: string
+              example: "incubating"
+            temperature:
+              type: integer
+              example: 37
+            progress:
+              type: number
+              example: 0
+            ui_config:
+              $ref: '#/components/schemas/UIConfig'
+
+    SetParametersRequest:
+      type: object
+      description: Запрос для установки параметров сущности (все поля опциональные)
+      properties:
+        temperature:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Температура сущности в градусах Цельсия
+          example: 25
+        time_remaining:
+          type: integer
+          minimum: 0
+          description: Оставшееся время в секундах
+          example: 3600
+        state:
+          type: string
+          enum: ["incubating", "hatching", "dead", "hatched"]
+          description: Состояние сущности
+          example: "incubating"
+      additionalProperties: false
+
+    SetParametersResponse:
+      type: object
+      required:
+        - success
+        - message
+        - entity_data
+      properties:
+        success:
+          type: boolean
+          description: Успешность операции
+          example: true
+        message:
+          type: string
+          description: Сообщение о результате
+          example: "Параметры сущности успешно обновлены"
+        entity_data:
+          type: object
+          description: Обновленные данные сущности
+          properties:
+            user_id:
+              type: integer
+              example: 273065571
+            entity_type:
+              type: string
+              example: "egg"
+            state:
+              type: string
+              example: "incubating"
+            temperature:
+              type: integer
+              example: 25
+            progress:
+              type: number
+              example: 67.3
+            time_remaining:
+              type: number
+              example: 3600
+            formatted_time:
+              type: string
+              example: "1:00:00"
+            ui_config:
+              $ref: '#/components/schemas/UIConfig'
+            hatching_clicks:
+              type: integer
+              example: 0
+            crack_stage:
+              type: string
+              nullable: true
+              example: null
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Описание ошибки
+          example: "Invalid user_id"
+        success:
+          type: boolean
+          description: Индикатор неуспешной операции
+          example: false
+
+  parameters:
+    user_id:
+      name: user_id
+      in: path
+      required: true
+      description: Уникальный ID пользователя Telegram
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+        example: 273065571 

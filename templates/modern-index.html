@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Telepets - Игра по выращиванию яйца в Telegram WebApp">
+    <meta name="theme-color" content="#667eea">
+    <meta name="color-scheme" content="light dark">
+    
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://telegram.org" crossorigin>
+    
+    <!-- DNS prefetch for potential future requests -->
+    <link rel="dns-prefetch" href="https://telegram.org">
+    
+    <!-- Critical CSS - inline for fastest rendering -->
+    <style>
+        /* Critical above-the-fold styles */
+        :root {
+            --color-primary: #667eea;
+            --color-secondary: #764ba2;
+            --transition-normal: 300ms ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+            min-height: 100vh;
+            min-height: 100dvh;
+            color: white;
+            overflow-x: hidden;
+            display: grid;
+            place-items: center;
+        }
+        
+        .loading {
+            font-size: 1.125rem;
+            font-weight: 500;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Prevent flash of unstyled content */
+        #app {
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+        }
+        
+        #app.loaded {
+            opacity: 1;
+        }
+    </style>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/static/css/modern-styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/static/css/accessibility.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    
+    <!-- Fallback for CSS if JavaScript is disabled -->
+    <noscript>
+        <link rel="stylesheet" href="/static/css/modern-styles.css">
+        <link rel="stylesheet" href="/static/css/accessibility.css">
+    </noscript>
+    
+
+    
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- Icons for different platforms -->
+    <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
+    <link rel="icon" type="image/png" href="/static/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-180.png">
+    
+    <title>Telepets - Игра по выращиванию яйца</title>
+    
+    <!-- Telegram WebApp script with async loading -->
+    <script async src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Polyfill for crypto.randomUUID (должен быть самым первым) -->
+    <script>
+    if (!window.crypto.randomUUID) {
+        window.crypto.randomUUID = function () {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        };
+        console.warn('[Polyfill] crypto.randomUUID установлен');
+    }
+    </script>
+</head>
+<body>
+
+    
+    <!-- Main application container with semantic markup -->
+    <main id="app" role="main" aria-label="Игра Telepets">
+        <div class="loading" role="status" aria-live="polite" aria-label="Загрузка приложения">
+            <span>Загрузка...</span>
+            <div class="loading-spinner" aria-hidden="true"></div>
+        </div>
+    </main>
+    
+    <!-- Error boundary for better UX -->
+    <div id="error-boundary" role="alert" aria-live="assertive" style="display: none;">
+        <h2>Произошла ошибка</h2>
+        <p>Пожалуйста, перезагрузите страницу или попробуйте позже.</p>
+        <button onclick="location.reload()">Перезагрузить</button>
+    </div>
+    
+    <!-- Performance monitoring -->
+    <script>
+        // Mark navigation start for performance monitoring
+        performance.mark('navigation-start');
+        
+        // Error handling
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+            console.error('Global error stack:', e.error?.stack);
+            document.getElementById('error-boundary').style.display = 'block';
+            document.getElementById('app').style.display = 'none';
+        });
+        
+        // Unhandled promise rejection handling
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled promise rejection:', e.reason);
+        });
+        
+        // Network status monitoring
+        function updateOnlineStatus() {
+            document.body.classList.toggle('offline', !navigator.onLine);
+        }
+        
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+    </script>
+    
+    <!-- Service Worker registration for offline support -->
+    <script>
+        // Service Worker будет загружен через ServiceWorkerManager
+        // для лучшего контроля и мониторинга
+    </script>
+    
+    <!-- Load modern application -->
+    <script>
+        // Modern application loading
+        function loadModernApp() {
+            console.log('🚀 Загружаем современное приложение...');
+            
+            // Load services first
+            const servicesLoader = document.createElement('script');
+            servicesLoader.src = '/static/js/services/ServicesLoader.js';
+            servicesLoader.onload = () => {
+                console.log('✅ Services Loader загружен');
+                loadSupportScripts();
+            };
+            document.head.appendChild(servicesLoader);
+        }
+        
+        function loadSupportScripts() {
+            const scripts = [
+                '/static/js/services/APIService.js',
+                '/static/js/services/TelegramService.js',
+                '/static/js/services/NotificationService.js',
+                '/static/js/services/TemperatureService.js',
+                '/static/js/services/TimerService.js',
+                '/static/js/services/ProgressService.js',
+                '/static/js/services/EggService.js',
+                '/static/js/utils/ServiceWorkerManager.js',
+                '/static/js/polyfills.js',
+                '/static/js/swipe-handler.js',
+                '/static/js/click-handler.js',
+                '/static/js/settings.js'
+            ];
+            
+            let loadedScripts = 0;
+            scripts.forEach((src) => {
+                const script = document.createElement('script');
+                script.src = src;
+                
+                script.onload = () => {
+                    loadedScripts++;
+                    console.log(`✅ Script loaded: ${src}`);
+                    
+                    if (loadedScripts === scripts.length) {
+                        console.log('🎯 Поддерживающие скрипты загружены, загружаем modern-app...');
+                        loadModernAppScript();
+                    }
+                };
+                
+                script.onerror = (error) => {
+                    console.error(`❌ Ошибка загрузки ${src}:`, error);
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
+        
+        function loadModernAppScript() {
+            const modernAppScript = document.createElement('script');
+            modernAppScript.src = '/static/js/modern-app.js';
+            
+            modernAppScript.onload = () => {
+                console.log('✅ Modern App загружен');
+            };
+            
+            modernAppScript.onerror = (error) => {
+                console.error('❌ Ошибка загрузки modern-app.js:', error);
+            };
+            
+            document.head.appendChild(modernAppScript);
+        }
+        
+        // Start loading when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadModernApp);
+        } else {
+            loadModernApp();
+        }
+    </script>
+    
+    <!-- Critical resource hints for next navigation -->
+    <script>
+        // Prefetch likely next resources
+        setTimeout(() => {
+            const prefetchLinks = [
+                // Note: /api/egg removed as it requires user_id parameter
+            ];
+            
+            prefetchLinks.forEach(href => {
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = href;
+                document.head.appendChild(link);
+            });
+        }, 2000);
+    </script>
+    
+    <!-- Analytics and monitoring (placeholder) -->
+    <script>
+        // Web Vitals monitoring
+        // Web Vitals removed due to CSP restrictions in Telegram WebApp
+        console.log('[Performance] Web Vitals disabled for Telegram compatibility');
+    </script>
+</body>
+</html> 
