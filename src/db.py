@@ -13,6 +13,7 @@ from config.settings import (
     CRACK_STAGES
 )
 from config.settings import HATCHING_CLICKS_REQUIRED, HATCHING_TIME_LIMIT
+from config.messages import get_message
 
 def get_connection():
     return sqlite3.connect(DATABASE_PATH)
@@ -294,15 +295,15 @@ def click_hatching_egg(user_id):
         # Получаем текущие данные яйца
         egg = get_egg(user_id)
         if not egg:
-            return {'success': False, 'error': 'Яйцо не найдено'}
+            return {'success': False, 'error': get_message('ERROR', 'EGG_NOT_FOUND')}
             
         if egg['status'] != 'вылупление':
             if egg['status'] == 'hatched':
-                return {'success': False, 'error': 'Питомец уже вылупился'}
+                return {'success': False, 'error': get_message('TELEGRAM', 'EGG_ALREADY_HATCHED')}
             elif egg['status'] == 'dead':
-                return {'success': False, 'error': 'Яйцо погибло'}
+                return {'success': False, 'error': get_message('ENTITY_STATE', 'DEAD')}
             else:
-                return {'success': False, 'error': 'Яйцо не находится в стадии вылупления'}
+                return {'success': False, 'error': get_message('TELEGRAM', 'NOT_HATCHING_STAGE')}
         
         # Увеличиваем счетчик кликов
         current_clicks = egg.get('hatching_clicks', 0)

@@ -42,8 +42,8 @@ def generate_settings_js():
         # Тестирование
         TEST_USER_ID, DEBUG_MODE, TEST_MODE, AUTO_CREATE_TEST_EGG,
         
-        # Сообщения
-        MESSAGES
+        # Сообщения (перенесены в NotificationService)
+        # MESSAGES
     )
     
     # Формируем содержимое settings.js
@@ -186,9 +186,10 @@ const FINAL_INCUBATION_TIME_SECONDS = FAST_MODE ?
 // НАСТРОЙКИ СООБЩЕНИЙ (для совместимости)
 // ========================================
 
-// Сообщения перенесены в NotificationService
-// Оставляем только критические значения для проверок
+// Сообщения перенесены в NotificationService.js
+// Используйте window.NOTIFICATION_MESSAGES для доступа к сообщениям
 const MESSAGES = {{
+    // Оставляем только критические значения для проверок
     TIMER_STOPPED: ""
 }};
 """
@@ -207,4 +208,11 @@ const MESSAGES = {{
     print(f"📝 Содержит {len(js_content.split(chr(10)))} строк")
 
 if __name__ == '__main__':
-    generate_settings_js() 
+    generate_settings_js()
+    
+    # Также генерируем messages.js
+    try:
+        from scripts.generate_messages_js import generate_messages_js
+        generate_messages_js()
+    except ImportError:
+        print("⚠️ generate_messages_js.py не найден, пропускаем генерацию messages.js") 

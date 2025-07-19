@@ -168,15 +168,26 @@ body {
 /* Swipe Progress Indicator */
 .swipe-progress {
     position: absolute;
-    top: -30px;                /* Поднят выше яйца */
+    top: -40px;                /* Поднят выше яйца */
     left: 50%;
     transform: translateX(-50%);
     width: 80%;
-    height: 8px;               /* Немного увеличен для лучшей видимости */
-    background: rgba(255, 255, 255, 0.2);
+    height: 10px;              /* Увеличен для лучшей видимости */
+    background: rgba(255, 255, 255, 0.3);
     border-radius: var(--border-radius-full);
     overflow: hidden;
     transition: opacity var(--transition-normal);
+    z-index: 100;              /* Убеждаемся, что элемент поверх других */
+    opacity: 1;                /* Временно всегда видим для тестирования */
+    pointer-events: none;      /* Не мешает кликам */
+    border: 2px solid rgba(255, 255, 255, 0.5); /* Добавляем границу для видимости */
+}
+
+/* Показываем прогресс свайпа при активном свайпе */
+.swipe-progress.active {
+    opacity: 1;
+    animation: swipeProgressFadeIn 0.3s ease-out;
+    background: rgba(255, 255, 255, 0.5); /* Более яркий фон при активности */
 }
 
 .swipe-fill {
@@ -185,6 +196,7 @@ body {
     border-radius: var(--border-radius-full);
     transition: width var(--transition-normal);
     position: relative;
+    width: 0%; /* Начальная ширина */
     
     &::after {
         content: '';
@@ -219,6 +231,39 @@ body {
     border-radius: var(--border-radius-md);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all var(--transition-normal);
+    position: relative;
+}
+
+/* Критические температуры */
+.temperature.critical {
+    background: rgba(255, 152, 0, 0.2);
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+    animation: criticalPulse 2s ease-in-out infinite;
+}
+
+.temperature.deadly {
+    background: rgba(244, 67, 54, 0.2);
+    border-color: var(--color-error);
+    color: var(--color-error);
+    animation: deadlyPulse 1s ease-in-out infinite;
+}
+
+.temp-warning {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: var(--font-size-sm);
+    animation: warningBlink 1s ease-in-out infinite;
+}
+
+.temp-danger {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: var(--font-size-sm);
+    animation: dangerBlink 0.5s ease-in-out infinite;
 }
 
 .timer.stopped {
@@ -341,6 +386,60 @@ body {
     gap: var(--space-xs);
     margin-top: var(--space-sm);
     width: 300px; /* Ширина равна ширине яйца */
+}
+
+/* Swipe Progress Bar */
+.swipe-progress-container {
+    position: absolute;
+    top: -50px; /* Позиционирован над яйцом */
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    width: 80%; /* Ширина относительно яйца */
+    opacity: 0; /* По умолчанию скрыт */
+    transition: opacity var(--transition-normal);
+    z-index: 100; /* Убеждаемся, что элемент поверх других */
+}
+
+.swipe-progress-container.active {
+    opacity: 1;
+}
+
+.swipe-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--border-radius-full);
+    overflow: hidden;
+}
+
+.swipe-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-warning), var(--color-accent));
+    border-radius: var(--border-radius-full);
+    transition: width var(--transition-normal);
+    position: relative;
+    
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        animation: progressShimmer 3s infinite;
+    }
+}
+
+.swipe-progress-text {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    text-align: center;
 }
 
 .progress-bar {
@@ -554,6 +653,17 @@ body {
     }
 }
 
+@keyframes swipeProgressFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
 /* Click Animation for Hatching */
 .egg.clicked {
     animation: clickPulse 0.2s ease-out;
@@ -596,4 +706,51 @@ body {
     background: color-mix(in srgb, var(--color-primary) 20%, transparent);
     border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
     color: var(--color-primary);
+}
+
+/* Анимации для критических температур */
+@keyframes criticalPulse {
+    0%, 100% {
+        background: rgba(255, 152, 0, 0.2);
+        border-color: var(--color-warning);
+    }
+    50% {
+        background: rgba(255, 152, 0, 0.4);
+        border-color: var(--color-warning);
+        box-shadow: 0 0 10px rgba(255, 152, 0, 0.6);
+    }
+}
+
+@keyframes deadlyPulse {
+    0%, 100% {
+        background: rgba(244, 67, 54, 0.2);
+        border-color: var(--color-error);
+    }
+    50% {
+        background: rgba(244, 67, 54, 0.4);
+        border-color: var(--color-error);
+        box-shadow: 0 0 15px rgba(244, 67, 54, 0.8);
+    }
+}
+
+@keyframes warningBlink {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+@keyframes dangerBlink {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
 } 

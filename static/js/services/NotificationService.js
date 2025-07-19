@@ -13,47 +13,28 @@ const NOTIFICATION_TYPES = {
 };
 
 // Централизованные тексты уведомлений
+// Используются сообщения из config/messages.py через messages.js
 const NOTIFICATION_MESSAGES = {
     // Температурные уведомления
-    TEMPERATURE: {
-        CRITICAL_LOW: "⚠️ КРИТИЧЕСКИ НИЗКАЯ ТЕМПЕРАТУРА! Трите яйцо!",
-        CRITICAL_HIGH: "⚠️ КРИТИЧЕСКИ ВЫСОКАЯ ТЕМПЕРАТУРА!",
-        LOW_TEMP: "🌡️ Температура низкая. Трите яйцо для нагрева.",
-        OVERHEAT_DEATH: "Яйцо погибло от перегрева!",
-        FREEZE_DEATH: "Яйцо погибло от холода!"
-    },
+    TEMPERATURE: window.MESSAGES?.TEMPERATURE || {},
     
     // Состояния яйца
-    STATES: {
-        DEAD: "💀 Яйцо погибло от экстремальной температуры!",
-        INCUBATING: "🥚 Поддерживайте температуру свайпами!",
-        HATCHING: "🐣 Кликайте по яйцу для вылупления!",
-        HATCHED: "🎉 Питомец вылупился!"
-    },
+    STATES: window.MESSAGES?.EGG_STATE || {},
     
     // Переходы состояний
-    STATE_TRANSITIONS: {
-        START_HATCHING: "🥚➡️🐣 Яйцо начинает вылупляться!",
-        HATCHED: "🎉 Питомец вылупился!",
-        DIED: "💀 Яйцо погибло...",
-        RESET: "🔄 Яйцо сброшено. Начните заново!"
-    },
+    STATE_TRANSITIONS: window.MESSAGES?.STATE_TRANSITION || {},
     
     // Действия
-    ACTIONS: {
-        WARMING_SUCCESS: "🔥 Яйцо нагрето!",
-        WARMING_FAILED: "❌ Не удалось нагреть яйцо.",
-        CLICK_SUCCESS: "👆 Клик засчитан!",
-        RESET_SUCCESS: "✅ Яйцо успешно сброшено!"
-    },
+    ACTIONS: window.MESSAGES?.ACTION || {},
     
     // Ошибки
-    ERRORS: {
-        EGG_NOT_FOUND: "❌ Яйцо не найдено",
-        LOADING_ERROR: "❌ Ошибка загрузки",
-        ALREADY_DEAD: "💀 Яйцо уже погибло.",
-        NETWORK_ERROR: "🌐 Ошибка сети. Попробуйте позже."
-    }
+    ERRORS: window.MESSAGES?.ERROR || {},
+    
+    // Telegram Bot сообщения
+    TELEGRAM: window.MESSAGES?.TELEGRAM || {},
+    
+    // Состояния сущностей
+    ENTITY_STATES: window.MESSAGES?.ENTITY_STATE || {}
 };
 
 // Конфигурация стилей для разных типов уведомлений
@@ -388,6 +369,46 @@ class NotificationService {
     }
 
     /**
+     * Уведомления о статусе температуры на основе данных с сервера
+     */
+    showTemperatureStatusNotification(temperatureStatus) {
+        if (!temperatureStatus || !temperatureStatus.message) {
+            return;
+        }
+
+        let type = NOTIFICATION_TYPES.INFO;
+        let duration = 4000;
+
+        // Определяем тип уведомления на основе статуса
+        switch (temperatureStatus.status) {
+            case 'deadly_cold':
+            case 'deadly_hot':
+                type = NOTIFICATION_TYPES.CRITICAL;
+                duration = 8000; // Показываем дольше для смертельных температур
+                break;
+            case 'critical_cold':
+            case 'critical_hot':
+                type = NOTIFICATION_TYPES.WARNING;
+                duration = 6000; // Показываем дольше для критических температур
+                break;
+            case 'normal':
+                type = NOTIFICATION_TYPES.SUCCESS;
+                duration = 3000; // Короткое уведомление для нормальной температуры
+                break;
+            case 'low':
+            case 'high':
+                type = NOTIFICATION_TYPES.INFO;
+                duration = 4000;
+                break;
+        }
+
+        // Показываем уведомление только если требуется действие или это критическая температура
+        if (temperatureStatus.requires_action || temperatureStatus.is_critical || temperatureStatus.is_deadly) {
+            this.show(temperatureStatus.message, type, duration);
+        }
+    }
+
+    /**
      * Уведомления о переходах состояний
      */
     showStateTransition(fromState, toState) {
@@ -400,7 +421,12 @@ class NotificationService {
             message = NOTIFICATION_MESSAGES.STATE_TRANSITIONS.HATCHED;
             type = NOTIFICATION_TYPES.SUCCESS;
         } else if (toState === 'dead') {
-            message = NOTIFICATION_MESSAGES.STATE_TRANSITIONS.DIED;
+            // Определяем причину смерти по предыдущему состоянию
+            if (fromState === 'incubating') {
+                message = NOTIFICATION_MESSAGES.STATES.DEAD;
+            } else {
+                message = NOTIFICATION_MESSAGES.STATE_TRANSITIONS.DIED;
+            }
             type = NOTIFICATION_TYPES.CRITICAL;
         } else if (toState === 'incubating' && fromState === 'dead') {
             message = NOTIFICATION_MESSAGES.STATE_TRANSITIONS.RESET;

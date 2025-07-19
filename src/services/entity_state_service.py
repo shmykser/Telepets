@@ -11,8 +11,15 @@ from config.entity_states import (
     EntityType, EggState, CreatureState, 
     get_state_config, get_valid_states, can_transition
 )
-from config.settings import HATCHING_CLICKS_REQUIRED, HATCHING_TIME_LIMIT
-from config.settings import FINAL_INCUBATION_TIME
+from config.settings import (
+    HATCHING_CLICKS_REQUIRED, HATCHING_TIME_LIMIT, FINAL_INCUBATION_TIME,
+    # Температурные настройки
+    CRITICAL_LOW_TEMP, CRITICAL_HIGH_TEMP,
+    DEAD_LOW_TEMP, DEAD_HIGH_TEMP,
+    NORMAL_TEMP_MIN, NORMAL_TEMP_MAX,
+    MIN_TEMP, MAX_TEMP
+)
+from config.messages import get_entity_state_message
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +57,8 @@ class EntityStateService:
                 'can_die_from_temperature': config.can_die_from_temperature,
                 'has_animation': config.has_animation,
                 
-                # Текст и сообщения
-                'notification_message': config.notification_message,
+                # Текст и сообщения (заполняются из NotificationService)
+                'notification_message': EntityStateService._get_notification_message(entity_type, state),
                 'progress_label': config.progress_label,
                 'timer_label': config.timer_label,
                 
@@ -73,6 +80,12 @@ class EntityStateService:
         if config.show_reset_button:
             actions.append('reset')
         return actions
+    
+    @staticmethod
+    def _get_notification_message(entity_type: str, state: str) -> str:
+        """Получить сообщение уведомления для состояния"""
+        # Используем централизованные сообщения из config/messages.py
+        return get_entity_state_message(entity_type, state)
     
     @staticmethod
     def check_auto_transitions(entity_data: Dict[str, Any]) -> Optional[str]:
@@ -110,11 +123,14 @@ class EntityStateService:
         current_state = entity_data.get('state', 'incubating')
         temperature = entity_data.get('temperature', 37)
         
-        # Проверка смерти от температуры
+        # Проверка смерти от температуры (только в состоянии инкубации)
         if current_state == 'incubating':
-            if temperature <= 15:  # Заморозка
+            # Смертельные температуры - мгновенный переход в dead
+            if temperature <= DEAD_LOW_TEMP:  # Заморозка
+                logger.warning(f"🥶 Яйцо погибло от холода! Температура: {temperature}°C")
                 return config.auto_transitions.get('freeze')
-            elif temperature >= 45:  # Перегрев
+            elif temperature >= DEAD_HIGH_TEMP:  # Перегрев
+                logger.warning(f"🔥 Яйцо погибло от перегрева! Температура: {temperature}°C")
                 return config.auto_transitions.get('overheat')
                 
             # Проверка завершения инкубации
@@ -315,3 +331,83 @@ class EntityStateService:
             
         except ValueError:
             return False, f"Invalid entity type: {entity_type}" 
+
+    @staticmethod
+    def check_temperature_status(entity_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Проверить статус температуры и вернуть информацию для уведомлений
+        
+        Returns:
+            Dict с информацией о статусе температуры
+        """
+        temperature = entity_data.get('temperature', 37)
+        current_state = entity_data.get('state', 'incubating')
+        
+        status = {
+            'temperature': temperature,
+            'status': 'normal',
+            'message': None,
+            'is_critical': False,
+            'is_deadly': False,
+            'requires_action': False
+        }
+        
+        # Проверка смертельных температур
+        if temperature <= DEAD_LOW_TEMP:
+            status.update({
+                'status': 'deadly_cold',
+                'message': f'🥶 КРИТИЧЕСКИ ХОЛОДНО! Температура: {temperature}°C',
+                'is_deadly': True,
+                'requires_action': True
+            })
+        elif temperature >= DEAD_HIGH_TEMP:
+            status.update({
+                'status': 'deadly_hot',
+                'message': f'🔥 КРИТИЧЕСКИ ГОРЯЧО! Температура: {temperature}°C',
+                'is_deadly': True,
+                'requires_action': True
+            })
+        
+        # Проверка критических температур (только если не смертельные)
+        elif temperature <= CRITICAL_LOW_TEMP:
+            status.update({
+                'status': 'critical_cold',
+                'message': f'❄️ Очень холодно! Температура: {temperature}°C. Свайпайте для нагрева!',
+                'is_critical': True,
+                'requires_action': True
+            })
+        elif temperature >= CRITICAL_HIGH_TEMP:
+            status.update({
+                'status': 'critical_hot',
+                'message': f'🌡️ Очень горячо! Температура: {temperature}°C',
+                'is_critical': True,
+                'requires_action': True
+            })
+        
+        # Проверка нормальных температур
+        elif NORMAL_TEMP_MIN <= temperature <= NORMAL_TEMP_MAX:
+            status.update({
+                'status': 'normal',
+                'message': f'✅ Нормальная температура: {temperature}°C',
+                'is_critical': False,
+                'is_deadly': False,
+                'requires_action': False
+            })
+        
+        # Проверка граничных температур (между нормальной и критической)
+        elif temperature < NORMAL_TEMP_MIN:
+            status.update({
+                'status': 'low',
+                'message': f'🌡️ Прохладно: {temperature}°C',
+                'is_critical': False,
+                'requires_action': False
+            })
+        elif temperature > NORMAL_TEMP_MAX:
+            status.update({
+                'status': 'high',
+                'message': f'🌡️ Тепло: {temperature}°C',
+                'is_critical': False,
+                'requires_action': False
+            })
+        
+        return status 

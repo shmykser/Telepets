@@ -276,6 +276,19 @@ class TelepetsApp {
                 }
             }
             
+            // Проверяем статус температуры и показываем уведомления
+            if (data.temperature_status) {
+                const tempStatus = data.temperature_status;
+                
+                // Показываем уведомления о статусе температуры
+                if (window.notificationService) {
+                    window.notificationService.showTemperatureStatusNotification(tempStatus);
+                }
+                
+                // Логируем статус температуры
+                this.logger.info(`🌡️ Temperature status: ${tempStatus.status} (${tempStatus.temperature}°C)`);
+            }
+            
             this.currentEggData = data;
             window.currentEggData = data;
             
@@ -343,12 +356,22 @@ class TelepetsApp {
         return `
             <div class="egg-container">
                 <div class="egg" id="egg" data-state="${data.state}">
+                    ${uiConfig.show_swipe_progress !== false ? `
+                        <div class="swipe-progress-container">
+                            <div class="swipe-progress-bar">
+                                <div class="swipe-progress-fill" style="width: 0%"></div>
+                            </div>
+                            <div class="swipe-progress-text">Нагрев: 0%</div>
+                        </div>
+                    ` : ''}
                     ${this.getEggContent(data)}
                 </div>
                 
                 ${uiConfig.show_temperature !== false ? `
-                    <div class="temperature" id="temperature">
+                    <div class="temperature ${data.temperature_status && data.temperature_status.is_critical ? 'critical' : ''} ${data.temperature_status && data.temperature_status.is_deadly ? 'deadly' : ''}" id="temperature">
                         ${window.temperatureService ? window.temperatureService.formatTemperature(data.temperature) : `🌡️ ${data.temperature > 0 ? '+' : ''}${data.temperature}°C`}
+                        ${data.temperature_status && data.temperature_status.is_critical ? '<div class="temp-warning">⚠️</div>' : ''}
+                        ${data.temperature_status && data.temperature_status.is_deadly ? '<div class="temp-danger">🚨</div>' : ''}
                     </div>
                 ` : ''}
                 

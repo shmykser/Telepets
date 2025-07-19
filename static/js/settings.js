@@ -10,14 +10,14 @@
 // ========================================
 
 // Время инкубации (в секундах)
-const INCUBATION_TIME_SECONDS = 60; // 60 секунд
+const INCUBATION_TIME_SECONDS = 600; // 600 секунд
 
 // Быстрый режим для тестирования (уменьшает время инкубации)
 const FAST_MODE = false;
 const FAST_MODE_MULTIPLIER = 0.1; // 10.0% от обычного времени
 
 // Финальное время инкубации (с учетом быстрого режима)
-const FINAL_INCUBATION_TIME = 60;
+const FINAL_INCUBATION_TIME = 600;
 
 // ========================================
 // НАСТРОЙКИ ВЫЛУПЛЕНИЯ
@@ -137,8 +137,9 @@ const FINAL_INCUBATION_TIME_SECONDS = FAST_MODE ?
 // НАСТРОЙКИ СООБЩЕНИЙ (для совместимости)
 // ========================================
 
-// Сообщения перенесены в NotificationService
-// Оставляем только критические значения для проверок
+// Сообщения перенесены в NotificationService.js
+// Используйте window.NOTIFICATION_MESSAGES для доступа к сообщениям
 const MESSAGES = {
+    // Оставляем только критические значения для проверок
     TIMER_STOPPED: ""
 };

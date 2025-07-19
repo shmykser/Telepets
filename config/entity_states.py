@@ -1,6 +1,9 @@
 """
 Конфигурация состояний сущностей (яйца, особи)
 Архитектура State Machine для масштабируемого управления состояниями
+
+СООБЩЕНИЯ: Все тексты сообщений централизованы в config/messages.py
+и автоматически заполняются через EntityStateService._get_notification_message()
 """
 
 from dataclasses import dataclass
@@ -45,8 +48,8 @@ class StateConfig:
     timer_label: str = ""
     
     # Переходы состояний
-    auto_transitions: Dict[str, str] = None
-    manual_transitions: List[str] = None
+    auto_transitions: Dict[str, str] = None  # type: ignore
+    manual_transitions: List[str] = None  # type: ignore
     
     def __post_init__(self):
         if self.auto_transitions is None:
@@ -72,8 +75,8 @@ EGG_STATES = {
         can_die_from_temperature=True,
         has_animation=True,
         
-        # Текст
-        notification_message="Поддерживайте температуру свайпами!",
+        # Текст (сообщения из config/messages.py)
+        notification_message="",  # Заполняется через EntityStateService
         progress_label="Прогресс инкубации",
         timer_label="До вылупления",
         
@@ -99,8 +102,8 @@ EGG_STATES = {
         can_click=True,
         has_animation=True,
         
-        # Текст
-        notification_message="Кликайте по яйцу для вылупления!",
+        # Текст (сообщения из config/messages.py)
+        notification_message="",  # Заполняется через EntityStateService
         progress_label="Прогресс вылупления",
         timer_label="Время на вылупление",
         
@@ -121,8 +124,8 @@ EGG_STATES = {
         # Механика
         has_animation=True,
         
-        # Текст
-        notification_message="Питомец вылупился! Начните новый цикл.",
+        # Текст (сообщения из config/messages.py)
+        notification_message="",  # Заполняется через EntityStateService
         
         # Переходы
         manual_transitions=[EggState.INCUBATING.value]
@@ -135,8 +138,8 @@ EGG_STATES = {
         # Механика
         has_animation=False,
         
-        # Текст
-        notification_message="Яйцо погибло. Начните заново.",
+        # Текст (сообщения из config/messages.py)
+        notification_message="",  # Заполняется через EntityStateService
         
         # Переходы
         manual_transitions=[EggState.INCUBATING.value]
@@ -152,7 +155,7 @@ CREATURE_STATES = {
         show_progress_bar=True,
         show_timer=True,
         has_animation=True,
-        notification_message="Ваш питомец родился! Ухаживайте за ним.",
+        notification_message="",  # Заполняется через EntityStateService
         progress_label="Рост детеныша",
         timer_label="До подросткового возраста"
     ),
@@ -161,14 +164,14 @@ CREATURE_STATES = {
         show_progress_bar=True,
         show_timer=True, 
         has_animation=True,
-        notification_message="Питомец растет! Тренируйте его способности.",
+        notification_message="",  # Заполняется через EntityStateService
         progress_label="Развитие подростка",
         timer_label="До взрослого возраста"
     ),
     
     CreatureState.ADULT: StateConfig(
         has_animation=True,
-        notification_message="Поздравляем! Ваш питомец полностью вырос!",
+        notification_message="",  # Заполняется через EntityStateService
         # Взрослая особь не имеет таймеров развития
     )
 }
@@ -177,7 +180,7 @@ CREATURE_STATES = {
 # СЛУЖЕБНЫЕ ФУНКЦИИ
 # ========================================
 
-def get_state_config(entity_type: EntityType, state: str) -> StateConfig:
+def get_state_config(entity_type: EntityType, state: str) -> Optional[StateConfig]:
     """Получить конфигурацию для конкретного состояния"""
     if entity_type == EntityType.EGG:
         return EGG_STATES.get(EggState(state))

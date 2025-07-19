@@ -58,6 +58,10 @@ def format_time(seconds):
 def format_entity_response(entity):
     """Форматирует данные сущности для ответа API"""
     ui_config = entity.get('ui_config', {})
+    
+    # Проверяем статус температуры
+    temperature_status = EntityStateService.check_temperature_status(entity)
+    
     return {
         # Основные данные
         'user_id': entity['user_id'],
@@ -74,6 +78,13 @@ def format_entity_response(entity):
         
         # Сообщение пользователю
         'message': ui_config.get('notification_message', ''),
+        
+        # Статус температуры
+        'temperature_status': temperature_status,
+        'temperature_message': temperature_status.get('message', ''),
+        'is_critical_temperature': temperature_status.get('is_critical', False),
+        'is_deadly_temperature': temperature_status.get('is_deadly', False),
+        'requires_temperature_action': temperature_status.get('requires_action', False),
         
         # Специфичные данные для состояния вылупления
         'hatching_clicks': entity.get('hatching_clicks', 0),
@@ -98,6 +109,14 @@ def get_egg_data(user_id):
         entity = get_entity(user_id)
         if not entity:
             return jsonify({'error': 'Entity not found'}), 404
+        
+        # Проверяем автоматические переходы состояний (например, смерть от температуры)
+        new_state = EntityStateService.check_auto_transitions(entity)
+        if new_state and new_state != entity['state']:
+            logger.info(f"🔄 Auto transition: {entity['state']} → {new_state}")
+            entity = transition_entity_state(user_id, new_state)
+            if not entity:
+                return jsonify({'error': 'Failed to transition state'}), 500
         
         # Используем общую функцию форматирования
         response_data = format_entity_response(entity)
@@ -326,6 +345,14 @@ def get_egg_updates(user_id):
                 # Получаем полные данные сущности
                 entity = get_entity(user_id)
                 if entity:
+                    # Проверяем автоматические переходы состояний
+                    new_state = EntityStateService.check_auto_transitions(entity)
+                    if new_state and new_state != entity['state']:
+                        logger.info(f"🔄 Auto transition in SSE: {entity['state']} → {new_state}")
+                        entity = transition_entity_state(user_id, new_state)
+                        if not entity:
+                            continue
+                    
                     # Формируем полные данные в том же формате что и основной API
                     data = format_entity_response(entity)
                     
