@@ -236,10 +236,7 @@ class TimerService {
             totalTime: this.totalTime
         });
         
-        // Уведомляем об истечении времени
-        if (window.notificationService) {
-            window.notificationService.show('⏰ Время истекло!', 'warning', 5000);
-        }
+        // Уведомления удалены
         
         // Запускаем проверку состояния яйца через современное приложение
         if (window.telepetsApp && typeof window.telepetsApp.loadEggData === 'function') {

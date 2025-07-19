@@ -66,14 +66,7 @@ class ServiceWorkerManager {
      * Показать уведомление об обновлении
      */
     showUpdateNotification() {
-        if (window.notificationService) {
-            window.notificationService.showNotification(
-                'Доступно обновление',
-                'Нажмите для обновления приложения',
-                'info',
-                0 // Не скрывать автоматически
-            );
-        }
+        // Уведомления удалены
     }
 
     /**

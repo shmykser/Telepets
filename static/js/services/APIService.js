@@ -74,35 +74,63 @@ class APIService {
     async startLongPolling(onUpdate, onError) {
         const url = `${this.baseURL}/${this.userId}/updates`;
         
-        while (true) {
-            try {
-                this.abortController = new AbortController();
-                
-                const response = await fetch(url, {
-                    signal: this.abortController.signal,
-                    headers: {
-                        'Cache-Control': 'no-cache',
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        try {
+            this.abortController = new AbortController();
+            
+            const response = await fetch(url, {
+                signal: this.abortController.signal,
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Accept': 'text/event-stream',
                 }
+            });
 
-                const data = await response.json();
-                onUpdate(data);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    // Long polling was cancelled
+            // Обрабатываем SSE поток
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
                     break;
                 }
-                
-                onError(error);
-                
-                // Wait before retrying
-                await this.delay(this.retryDelay);
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const jsonData = line.slice(6); // Убираем 'data: '
+                            const data = JSON.parse(jsonData);
+                            onUpdate(data);
+                        } catch (parseError) {
+                            console.warn('Failed to parse SSE data:', parseError);
+                        }
+                    }
+                }
             }
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                // Long polling was cancelled
+                return;
+            }
+            
+            onError(error);
+            
+            // Wait before retrying
+            await this.delay(this.retryDelay);
+            
+            // Рекурсивно перезапускаем long polling
+            setTimeout(() => {
+                this.startLongPolling(onUpdate, onError);
+            }, this.retryDelay);
         }
     }
 

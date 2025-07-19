@@ -101,11 +101,11 @@ class SwipeHandler {
     handleTouchMove(e, handler) {
         if (!handler.isSwiping || this.shouldSkipSwipe(handler)) return;
         
-    e.preventDefault();
-    const touch = e.touches[0];
-    const currentX = touch.clientX;
-    const currentY = touch.clientY;
-    
+        e.preventDefault();
+        const touch = e.touches[0];
+        const currentX = touch.clientX;
+        const currentY = touch.clientY;
+        
         this.processMovement(currentX, currentY, handler);
     }
 
@@ -180,8 +180,8 @@ class SwipeHandler {
     processMovement(currentX, currentY, handler) {
         const deltaX = Math.abs(currentX - handler.lastX);
         const deltaY = Math.abs(currentY - handler.lastY);
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
         handler.totalDistance += distance;
         handler.lastX = currentX;
         handler.lastY = currentY;
@@ -249,15 +249,15 @@ class SwipeHandler {
         const element = document.getElementById(handler.elementId);
         if (!element) return;
         
-        // Используем новый прогресс-бар для свайпа
-        const progressContainer = document.querySelector('.swipe-progress-container');
-        const fillElement = document.querySelector('.swipe-progress-fill');
-        const textElement = document.querySelector('.swipe-progress-text');
+        // Ищем прогресс-бар для данного элемента
+        const progressContainer = element.querySelector('.swipe-progress-container');
+        const fillElement = element.querySelector('.swipe-progress-fill');
+        const textElement = element.querySelector('.swipe-progress-text');
         
         if (progressContainer && fillElement && textElement && handler.config.completeThreshold) {
             const progressPercent = (handler.swipeCount / handler.config.completeThreshold) * 100;
             fillElement.style.width = `${progressPercent}%`;
-            textElement.textContent = `Нагрев: ${Math.round(progressPercent)}%`;
+            textElement.textContent = `Прогресс: ${Math.round(progressPercent)}%`;
             
             // Показываем прогресс-бар при активном свайпе
             if (handler.swipeCount > 0) {
@@ -329,7 +329,10 @@ class SwipeHandler {
      * @param {Object} handler - Обработчик
      */
     showSwipeProgress(handler) {
-        const progressContainer = document.querySelector('.swipe-progress-container');
+        const element = document.getElementById(handler.elementId);
+        if (!element) return;
+        
+        const progressContainer = element.querySelector('.swipe-progress-container');
         if (progressContainer) {
             progressContainer.classList.add('active');
         }
@@ -340,7 +343,10 @@ class SwipeHandler {
      * @param {Object} handler - Обработчик
      */
     hideSwipeProgress(handler) {
-        const progressContainer = document.querySelector('.swipe-progress-container');
+        const element = document.getElementById(handler.elementId);
+        if (!element) return;
+        
+        const progressContainer = element.querySelector('.swipe-progress-container');
         if (progressContainer) {
             // Скрываем прогресс только если нет активных свайпов
             setTimeout(() => {
@@ -366,96 +372,6 @@ class SwipeHandler {
 
 // Создаем глобальный экземпляр
 window.swipeHandler = new SwipeHandler();
-
-// === МЕХАНИКА НАГРЕВА ЯЙЦА СВАЙПАМИ ===
-
-// Используем глобальное значение из settings.js
-let swipeProgress = 0;
-let swipeActive = false;
-
-function showSwipeProgressBar() {
-    const container = document.querySelector('.swipe-progress-container');
-    if (container) container.classList.add('active');
-}
-
-function hideSwipeProgressBar() {
-    const container = document.querySelector('.swipe-progress-container');
-    if (container) container.classList.remove('active');
-}
-
-function updateSwipeProgressBar(percent) {
-    const fill = document.querySelector('.swipe-progress-fill');
-    const text = document.querySelector('.swipe-progress-text');
-    if (fill) fill.style.width = `${percent}%`;
-    if (text) text.textContent = `Нагрев: ${Math.round(percent)}%`;
-}
-
-function resetSwipeProgressBar() {
-    updateSwipeProgressBar(0);
-    hideSwipeProgressBar();
-    swipeProgress = 0;
-    swipeActive = false;
-}
-
-function handleEggSwipe() {
-    swipeProgress++;
-    if (!swipeActive) {
-        swipeActive = true;
-        showSwipeProgressBar();
-    }
-    const threshold = window.SWIPES_PER_DEGREE || 10;
-    const percent = Math.min(100, (swipeProgress / threshold) * 100);
-    updateSwipeProgressBar(percent);
-    if (swipeProgress >= threshold) {
-        // Повышаем температуру
-        if (window.temperatureService && window.currentEggData && window.userId) {
-            window.temperatureService.showTempIncrease();
-            window.temperatureService.warmEgg(window.userId, window.currentEggData);
-        }
-        resetSwipeProgressBar();
-    }
-}
-
-// Подключаем обработчик свайпа к яйцу
-function setupSwipeHandlers() {
-    const egg = document.getElementById('egg');
-    if (!egg) return;
-    // Очищаем старые обработчики
-    egg.ontouchstart = null;
-    egg.ontouchmove = null;
-    egg.ontouchend = null;
-    let touchStartX = null;
-    let touchStartY = null;
-    let touchMoved = false;
-    egg.addEventListener('touchstart', function(e) {
-        if (e.touches.length === 1) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-            touchMoved = false;
-        }
-    });
-    egg.addEventListener('touchmove', function(e) {
-        if (touchStartX === null || touchStartY === null) return;
-        const dx = e.touches[0].clientX - touchStartX;
-        const dy = e.touches[0].clientY - touchStartY;
-        if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
-            touchMoved = true;
-            handleEggSwipe();
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }
-    });
-    egg.addEventListener('touchend', function(e) {
-        if (!touchMoved) {
-            resetSwipeProgressBar();
-        }
-        touchStartX = null;
-        touchStartY = null;
-        touchMoved = false;
-    });
-}
-
-window.setupSwipeHandlers = setupSwipeHandlers;
 
 // Экспорт для использования в других модулях
 if (typeof module !== 'undefined' && module.exports) {

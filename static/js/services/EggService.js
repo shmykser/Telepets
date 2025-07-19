@@ -173,10 +173,7 @@ class EggService {
             eggElement.onclick = () => this.handleClick();
         }
         
-        // Обработчики свайпов
-        if (window.swipeHandler) {
-            window.setupSwipeHandlers();
-        }
+        // Обработчики свайпов удалены
     }
 
     /**
@@ -192,17 +189,12 @@ class EggService {
                     // Обновляем данные и перерендериваем
                     await this.updateEggData();
                     
-                    // Показываем уведомление
-                    if (window.notificationService) {
-                        window.notificationService.showActionNotification('click', true);
-                    }
+                    // Уведомления удалены
                 }
             }
         } catch (error) {
             this.logger.error('❌ Error clicking egg:', error);
-            if (window.notificationService) {
-                window.notificationService.showErrorNotification('Ошибка клика: ' + error.message);
-            }
+            // Уведомления удалены
         }
     }
 
@@ -227,17 +219,12 @@ class EggService {
                         }
                     }
                     
-                    // Показываем уведомление
-                    if (window.notificationService) {
-                        window.notificationService.showActionNotification('reset', true);
-                    }
+                    // Уведомления удалены
                 }
             }
         } catch (error) {
             this.logger.error('❌ Error resetting egg:', error);
-            if (window.notificationService) {
-                window.notificationService.showErrorNotification('Ошибка сброса: ' + error.message);
-            }
+            // Уведомления удалены
         }
     }
 
