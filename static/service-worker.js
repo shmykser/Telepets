@@ -32,9 +32,8 @@ const CACHE_CONFIGS = {
     STATIC: {
         urls: [
             '/',
-            '/static/css/modern-styles.css',
-            '/static/css/accessibility.css',
-            '/static/js/modern-app.js',
+                '/static/css/styles.css',
+            '/static/js/app.js',
             '/static/js/settings.js',
             '/static/js/swipe-handler.js',
             '/static/js/polyfills.js',

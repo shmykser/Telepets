@@ -80,104 +80,11 @@ class NotificationService {
 
     /**
      * Инициализация CSS стилей для уведомлений
+     * Стили теперь загружаются из styles.css
      */
     initializeStyles() {
-        if (document.getElementById('notification-system-styles')) return;
-
-        const style = document.createElement('style');
-        style.id = 'notification-system-styles';
-        style.textContent = `
-            .notification-container {
-                position: fixed;
-                top: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                z-index: 1000;
-                pointer-events: none;
-                width: 90%;
-                max-width: 400px;
-            }
-
-            .notification-item {
-                background: rgba(255, 255, 255, 0.1);
-                color: #ffffff;
-                padding: 12px 16px;
-                margin-bottom: 8px;
-                border-radius: 8px;
-                border: 2px solid;
-                backdrop-filter: blur(10px);
-                text-align: center;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-                font-size: 14px;
-                font-weight: 500;
-                line-height: 1.2;
-                min-height: 44px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                word-break: break-word;
-                hyphens: auto;
-                transition: all 0.3s ease;
-            }
-
-            .notification-item.long-text {
-                font-size: 12px;
-                line-height: 1.1;
-                padding: 10px 14px;
-            }
-
-            .notification-item.very-long-text {
-                font-size: 11px;
-                line-height: 1.0;
-                padding: 8px 12px;
-            }
-
-            .notification-enter {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-
-            .notification-enter-active {
-                opacity: 1;
-                transform: translateY(0);
-                transition: all 0.3s ease;
-            }
-
-            .notification-exit {
-                opacity: 1;
-                transform: translateY(0);
-            }
-
-            .notification-exit-active {
-                opacity: 0;
-                transform: translateY(-20px);
-                transition: all 0.3s ease;
-            }
-
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.7; }
-            }
-
-            @media (max-width: 480px) {
-                .notification-item {
-                    font-size: 13px;
-                    padding: 10px 12px;
-                    min-height: 40px;
-                }
-                
-                .notification-item.long-text {
-                    font-size: 11px;
-                    padding: 8px 10px;
-                }
-                
-                .notification-item.very-long-text {
-                    font-size: 10px;
-                    padding: 6px 8px;
-                }
-            }
-        `;
-        document.head.appendChild(style);
+        // Стили теперь централизованы в styles.css
+        // Этот метод оставлен для совместимости
     }
 
     /**

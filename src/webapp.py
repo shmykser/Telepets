@@ -393,7 +393,7 @@ def get_egg_updates(user_id):
 @app.route('/')
 def index():
     """Главная страница"""
-    return render_template('modern-index.html')
+    return render_template('index.html')
 
 
 # Обработчик CORS preflight запросов
