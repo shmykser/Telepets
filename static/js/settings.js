@@ -56,17 +56,17 @@ const PROGRESS_DECAY_TIME = 400; // 0.4 секунды
 const CRITICAL_LOW_TEMP = 26;
 
 // Критически высокая температура (таймер останавливается)
-const CRITICAL_HIGH_TEMP = 41;
+const CRITICAL_HIGH_TEMP = 37;
 
 // Смертельная низкая температура
 const DEAD_LOW_TEMP = 18;
 
 // Смертельная высокая температура
-const DEAD_HIGH_TEMP = 44;
+const DEAD_HIGH_TEMP = 48;
 
 // Нормальная температура для инкубации
-const NORMAL_TEMP_MIN = 28;
-const NORMAL_TEMP_MAX = 41;
+const NORMAL_TEMP_MIN = 26;
+const NORMAL_TEMP_MAX = 37;
 
 // ========================================
 // НАСТРОЙКИ ВРЕМЕНИ

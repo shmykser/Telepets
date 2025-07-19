@@ -20,13 +20,13 @@ FINAL_INCUBATION_TIME = INCUBATION_TIME_SECONDS * (FAST_MODE_MULTIPLIER if FAST_
 CRITICAL_LOW_TEMP = 26
 
 # Критически высокая температура (таймер останавливается)
-CRITICAL_HIGH_TEMP = 41
+CRITICAL_HIGH_TEMP = 37
 
 # Смертельная низкая температура
 DEAD_LOW_TEMP = 18
 
 # Смертельная высокая температура
-DEAD_HIGH_TEMP = 44
+DEAD_HIGH_TEMP = 48
 
 # Максимальная температура нагрева
 MAX_TEMP = 50
@@ -35,8 +35,8 @@ MAX_TEMP = 50
 MIN_TEMP = 15
 
 # Нормальная температура для инкубации
-NORMAL_TEMP_MIN = 28
-NORMAL_TEMP_MAX = 41
+NORMAL_TEMP_MIN = 26
+NORMAL_TEMP_MAX = 37
 
 # ========================================
 # НАСТРОЙКИ ОХЛАЖДЕНИЯ

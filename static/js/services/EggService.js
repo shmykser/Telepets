@@ -76,6 +76,14 @@ class EggService {
                 window.timerService.updateTimerDisplay(data);
             }
             
+            // Обновляем цвет яйца после рендеринга
+            if (window.temperatureService && data.temperature !== undefined) {
+                // Небольшая задержка для гарантии, что DOM обновился
+                setTimeout(() => {
+                    window.temperatureService.updateEggColor(data.temperature);
+                }, 10);
+            }
+            
             this.logger.info('✅ Egg rendered successfully');
         } catch (error) {
             this.logger.error('❌ Error in renderEgg:', error);

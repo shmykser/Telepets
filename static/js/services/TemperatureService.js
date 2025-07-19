@@ -26,9 +26,9 @@ class TemperatureService {
      * @returns {string} CSS градиент для яйца
      */
     getEggColorByTemperature(temperature) {
-        // Нормальная температура (28-41°C) - золотистый
+        // Нормальная температура (28-41°C) - светлый золотистый с градиентом
         if (temperature >= 28 && temperature <= 41) {
-            return 'linear-gradient(135deg, #ffeaa7 0%, #fab1a0 50%, #e17055 100%)';
+            return 'linear-gradient(135deg, #fff8dc 0%, #ffe4b5 30%, #ffdab9 60%, #f4a460 100%)';
         }
         
         // Очень холодно (15-18°C) - синий/голубой
@@ -36,31 +36,33 @@ class TemperatureService {
             return 'linear-gradient(135deg, #74b9ff 0%, #0984e3 50%, #6c5ce7 100%)';
         }
         
-        // Холодно (18-26°C) - от синего к золотистому
+        // Холодно (18-26°C) - от синего к светлому золотистому с градиентом
         if (temperature > 18 && temperature < 28) {
             const ratio = (temperature - 18) / (28 - 18); // 0-1
             return `linear-gradient(135deg, 
-                ${this.interpolateColor('#74b9ff', '#ffeaa7', ratio)} 0%, 
-                ${this.interpolateColor('#0984e3', '#fab1a0', ratio)} 50%, 
-                ${this.interpolateColor('#6c5ce7', '#e17055', ratio)} 100%)`;
+                ${this.interpolateColor('#74b9ff', '#fff8dc', ratio)} 0%, 
+                ${this.interpolateColor('#0984e3', '#ffe4b5', ratio)} 30%, 
+                ${this.interpolateColor('#6c5ce7', '#ffdab9', ratio)} 60%, 
+                ${this.interpolateColor('#6c5ce7', '#f4a460', ratio)} 100%)`;
         }
         
-        // Жарко (41-44°C) - от золотистого к оранжевому
+        // Жарко (41-44°C) - от светлого золотистого с градиентом к оранжево-красному
         if (temperature > 41 && temperature <= 44) {
             const ratio = (temperature - 41) / (44 - 41); // 0-1
             return `linear-gradient(135deg, 
-                ${this.interpolateColor('#ffeaa7', '#ff7675', ratio)} 0%, 
-                ${this.interpolateColor('#fab1a0', '#fd79a8', ratio)} 50%, 
-                ${this.interpolateColor('#e17055', '#e84393', ratio)} 100%)`;
+                ${this.interpolateColor('#fff8dc', '#ff8c42', ratio)} 0%, 
+                ${this.interpolateColor('#ffe4b5', '#ff6b35', ratio)} 30%, 
+                ${this.interpolateColor('#ffdab9', '#e74c3c', ratio)} 60%, 
+                ${this.interpolateColor('#f4a460', '#c0392b', ratio)} 100%)`;
         }
         
-        // Очень жарко (44-50°C) - огненный красный
+        // Очень жарко (44-50°C) - оранжево-красный
         if (temperature > 44) {
-            return 'linear-gradient(135deg, #ff7675 0%, #fd79a8 50%, #e84393 100%)';
+            return 'linear-gradient(135deg, #ff8c42 0%, #ff6b35 30%, #e74c3c 60%, #c0392b 100%)';
         }
         
-        // По умолчанию - золотистый
-        return 'linear-gradient(135deg, #ffeaa7 0%, #fab1a0 50%, #e17055 100%)';
+        // По умолчанию - светлый золотистый с градиентом
+        return 'linear-gradient(135deg, #fff8dc 0%, #ffe4b5 30%, #ffdab9 60%, #f4a460 100%)';
     }
 
     /**
@@ -107,6 +109,16 @@ class TemperatureService {
         
         // Также обновляем CSS переменную для совместимости
         document.documentElement.style.setProperty('--egg-background', newColor);
+        
+        // Принудительно вызываем перерисовку
+        egg.style.display = 'none';
+        egg.offsetHeight; // Триггер reflow
+        egg.style.display = '';
+        
+        // Альтернативный способ - обновляем через requestAnimationFrame
+        requestAnimationFrame(() => {
+            egg.style.setProperty('background', newColor, 'important');
+        });
         
         console.log(`🎨 Обновлен цвет яйца для температуры ${temperature}°C: ${newColor}`);
     }
