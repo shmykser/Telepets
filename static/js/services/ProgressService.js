@@ -13,6 +13,10 @@ class ProgressService {
         this.progressElement = null;
         this.fillElement = null;
         this.textElement = null;
+        this.progressInterval = null;
+        this.currentEggData = null;
+        this.startTime = null;
+        this.totalTime = null;
         this.logger = {
             info: (msg) => console.log(`[ProgressService] ${msg}`),
             error: (msg) => console.error(`[ProgressService] ${msg}`),
@@ -67,6 +71,9 @@ class ProgressService {
                 return;
             }
 
+            // Сохраняем данные для автоматического обновления
+            this.currentEggData = data;
+            
             // Рассчитываем прогресс в зависимости от состояния
             const progressData = this.calculateProgress(data);
             
@@ -75,6 +82,9 @@ class ProgressService {
             
             this.currentProgress = progressData.percent;
             this.currentState = data.state;
+            
+            // Запускаем или останавливаем автоматическое обновление
+            this.handleAutoProgressUpdate(data);
             
             this.logger.info(`✅ Progress updated: ${progressData.percent}% (${progressData.type})`);
             
@@ -118,16 +128,18 @@ class ProgressService {
     calculateIncubationProgress(data) {
         // Проверяем доступность настроек
         let totalTime;
-        if (typeof INCUBATION_TIME_SECONDS === 'undefined') {
-            this.logger.warn('INCUBATION_TIME_SECONDS не доступен, используем значение по умолчанию');
-            totalTime = 259200; // 72 часа в секундах
+        if (typeof FINAL_INCUBATION_TIME_SECONDS === 'undefined') {
+            this.logger.warn('FINAL_INCUBATION_TIME_SECONDS не доступен, используем значение по умолчанию');
+            totalTime = 60; // 60 секунд для тестирования
         } else {
-            totalTime = INCUBATION_TIME_SECONDS;
+            totalTime = FINAL_INCUBATION_TIME_SECONDS;
         }
         
         const timeRemaining = data.time_remaining || 0;
         const elapsed = totalTime - timeRemaining;
         const percent = Math.max(0, Math.min(100, (elapsed / totalTime) * 100));
+        
+        this.logger.info(`📊 Прогресс инкубации: ${elapsed}/${totalTime} сек = ${Math.round(percent)}%`);
         
         return {
             percent: Math.round(percent),
@@ -145,8 +157,10 @@ class ProgressService {
      */
     calculateHatchingProgress(data) {
         const currentClicks = data.hatching_clicks || 0;
-        const requiredClicks = data.required_clicks || 1000;
+        const requiredClicks = data.required_clicks || HATCHING_CLICKS_REQUIRED || 10;
         const percent = Math.max(0, Math.min(100, (currentClicks / requiredClicks) * 100));
+        
+        this.logger.info(`📊 Прогресс вылупления: ${currentClicks}/${requiredClicks} кликов = ${Math.round(percent)}%`);
         
         return {
             percent: Math.round(percent),
@@ -317,6 +331,81 @@ class ProgressService {
     }
 
     /**
+     * Обработка автоматического обновления прогресса
+     * @param {Object} data - Данные яйца
+     */
+    handleAutoProgressUpdate(data) {
+        if (data.state === 'incubating' && data.time_remaining > 0) {
+            this.startAutoProgressUpdate(data);
+        } else {
+            this.stopAutoProgressUpdate();
+        }
+    }
+
+    /**
+     * Запуск автоматического обновления прогресса
+     * @param {Object} data - Данные яйца
+     */
+    startAutoProgressUpdate(data) {
+        this.stopAutoProgressUpdate(); // Останавливаем предыдущий интервал
+        
+        this.currentEggData = data;
+        this.totalTime = FINAL_INCUBATION_TIME_SECONDS || 60;
+        this.startTime = Date.now() - ((this.totalTime - data.time_remaining) * 1000);
+        
+        this.logger.info(`📊 Запуск автоматического обновления прогресса: ${this.totalTime} сек`);
+        
+        // Обновляем прогресс каждую секунду
+        this.progressInterval = setInterval(() => {
+            this.updateProgressInRealTime();
+        }, 1000);
+    }
+
+    /**
+     * Остановка автоматического обновления прогресса
+     */
+    stopAutoProgressUpdate() {
+        if (this.progressInterval) {
+            clearInterval(this.progressInterval);
+            this.progressInterval = null;
+            this.logger.info('📊 Автоматическое обновление прогресса остановлено');
+        }
+    }
+
+    /**
+     * Обновление прогресса в реальном времени
+     */
+    updateProgressInRealTime() {
+        if (!this.currentEggData || this.currentEggData.state !== 'incubating') {
+            return;
+        }
+
+        const now = Date.now();
+        const elapsed = (now - this.startTime) / 1000;
+        const timeRemaining = Math.max(0, this.totalTime - elapsed);
+        const percent = Math.max(0, Math.min(100, (elapsed / this.totalTime) * 100));
+
+        // Обновляем данные
+        this.currentEggData.time_remaining = timeRemaining;
+        
+        // Обновляем отображение
+        this.updateProgressDisplay({
+            percent: Math.round(percent),
+            type: 'incubation',
+            current: elapsed,
+            total: this.totalTime,
+            description: 'Прогресс инкубации'
+        }, 'incubating');
+
+        this.logger.info(`📊 Прогресс в реальном времени: ${Math.round(percent)}% (${timeRemaining.toFixed(1)} сек)`);
+
+        // Если время истекло, останавливаем обновление
+        if (timeRemaining <= 0) {
+            this.stopAutoProgressUpdate();
+        }
+    }
+
+    /**
      * Сброс состояния сервиса
      */
     reset() {
@@ -325,6 +414,10 @@ class ProgressService {
         this.progressElement = null;
         this.fillElement = null;
         this.textElement = null;
+        this.stopAutoProgressUpdate();
+        this.currentEggData = null;
+        this.startTime = null;
+        this.totalTime = null;
         this.logger.info('ProgressService reset');
     }
 
@@ -336,7 +429,8 @@ class ProgressService {
         return {
             currentProgress: this.currentProgress,
             currentState: this.currentState,
-            hasElements: !!(this.progressElement && this.fillElement && this.textElement)
+            hasElements: !!(this.progressElement && this.fillElement && this.textElement),
+            autoUpdateActive: this.progressInterval !== null
         };
     }
 }

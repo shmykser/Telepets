@@ -9,8 +9,8 @@
 // НАСТРОЙКИ ВРЕМЕНИ ИНКУБАЦИИ
 // ========================================
 
-// Время инкубации (в часах)
-const INCUBATION_TIME_HOURS = 0; // 0 часов
+// Время инкубации (в секундах)
+const INCUBATION_TIME_SECONDS = 60; // 60 секунд
 
 // Быстрый режим для тестирования (уменьшает время инкубации)
 const FAST_MODE = false;
@@ -18,6 +18,19 @@ const FAST_MODE_MULTIPLIER = 0.1; // 10.0% от обычного времени
 
 // Финальное время инкубации (с учетом быстрого режима)
 const FINAL_INCUBATION_TIME = 60;
+
+// ========================================
+// НАСТРОЙКИ ВЫЛУПЛЕНИЯ
+// ========================================
+
+// Количество кликов, необходимых для вылупления
+const HATCHING_CLICKS_REQUIRED = 100;
+
+// Максимальное время на вылупление (в секундах)
+const HATCHING_TIME_LIMIT = 600; // 10 минут
+
+// Стадии трещин для вылупления
+const CRACK_STAGES = {"100": "small_crack", "300": "medium_crack", "600": "large_crack", "900": "breaking"};
 
 // ========================================
 // НАСТРОЙКИ СВАЙПОВ И ВЗАИМОДЕЙСТВИЯ
@@ -115,10 +128,10 @@ const DEBUG_MODE = true;
 // Размер свайпа в пикселях
 const SWIPE_THRESHOLD_PIXELS = EGG_WIDTH * (SWIPE_THRESHOLD_PERCENT / 100);
 
-// Время инкубации в секундах
-const INCUBATION_TIME_SECONDS = FAST_MODE ? 
-    (INCUBATION_TIME_HOURS * 3600 * FAST_MODE_MULTIPLIER) : 
-    (INCUBATION_TIME_HOURS * 3600);
+// Время инкубации с учетом быстрого режима
+const FINAL_INCUBATION_TIME_SECONDS = FAST_MODE ? 
+    (INCUBATION_TIME_SECONDS * FAST_MODE_MULTIPLIER) : 
+    INCUBATION_TIME_SECONDS;
 
 // ========================================
 // НАСТРОЙКИ СООБЩЕНИЙ (для совместимости)

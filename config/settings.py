@@ -167,7 +167,7 @@ AUTO_CREATE_TEST_EGG = True
 # ========================================
 
 # Количество кликов, необходимых для вылупления
-HATCHING_CLICKS_REQUIRED = 10
+HATCHING_CLICKS_REQUIRED = 100
 
 # Максимальное время на вылупление (в секундах) - 10 минут
 HATCHING_TIME_LIMIT = 600

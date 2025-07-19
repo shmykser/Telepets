@@ -340,10 +340,10 @@ body {
     align-items: center;
     gap: var(--space-xs);
     margin-top: var(--space-sm);
+    width: 300px; /* Ширина равна ширине яйца */
 }
 
 .progress-bar {
-    grid-column: 1 / -1;
     width: 100%;
     height: 8px;
     background: rgba(255, 255, 255, 0.2);
@@ -435,6 +435,10 @@ body {
     .egg {
         width: 160px;
         height: 200px;
+    }
+    
+    .progress-container {
+        width: 160px; /* Ширина равна ширине яйца на мобильных */
     }
     
     .info-panel {

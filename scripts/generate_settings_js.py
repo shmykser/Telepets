@@ -58,8 +58,8 @@ def generate_settings_js():
 // НАСТРОЙКИ ВРЕМЕНИ ИНКУБАЦИИ
 // ========================================
 
-// Время инкубации (в часах)
-const INCUBATION_TIME_HOURS = {INCUBATION_TIME_SECONDS // 3600}; // {INCUBATION_TIME_SECONDS // 3600} часов
+// Время инкубации (в секундах)
+const INCUBATION_TIME_SECONDS = {INCUBATION_TIME_SECONDS}; // {INCUBATION_TIME_SECONDS} секунд
 
 // Быстрый режим для тестирования (уменьшает время инкубации)
 const FAST_MODE = {str(FAST_MODE).lower()};
@@ -67,6 +67,19 @@ const FAST_MODE_MULTIPLIER = {FAST_MODE_MULTIPLIER}; // {FAST_MODE_MULTIPLIER * 
 
 // Финальное время инкубации (с учетом быстрого режима)
 const FINAL_INCUBATION_TIME = {FINAL_INCUBATION_TIME};
+
+// ========================================
+// НАСТРОЙКИ ВЫЛУПЛЕНИЯ
+// ========================================
+
+// Количество кликов, необходимых для вылупления
+const HATCHING_CLICKS_REQUIRED = {HATCHING_CLICKS_REQUIRED};
+
+// Максимальное время на вылупление (в секундах)
+const HATCHING_TIME_LIMIT = {HATCHING_TIME_LIMIT}; // {HATCHING_TIME_LIMIT // 60} минут
+
+// Стадии трещин для вылупления
+const CRACK_STAGES = {json.dumps(CRACK_STAGES)};
 
 // ========================================
 // НАСТРОЙКИ СВАЙПОВ И ВЗАИМОДЕЙСТВИЯ
@@ -164,10 +177,10 @@ const DEBUG_MODE = {str(DEBUG_MODE).lower()};
 // Размер свайпа в пикселях
 const SWIPE_THRESHOLD_PIXELS = EGG_WIDTH * (SWIPE_THRESHOLD_PERCENT / 100);
 
-// Время инкубации в секундах
-const INCUBATION_TIME_SECONDS = FAST_MODE ? 
-    (INCUBATION_TIME_HOURS * 3600 * FAST_MODE_MULTIPLIER) : 
-    (INCUBATION_TIME_HOURS * 3600);
+// Время инкубации с учетом быстрого режима
+const FINAL_INCUBATION_TIME_SECONDS = FAST_MODE ? 
+    (INCUBATION_TIME_SECONDS * FAST_MODE_MULTIPLIER) : 
+    INCUBATION_TIME_SECONDS;
 
 // ========================================
 // НАСТРОЙКИ СООБЩЕНИЙ (для совместимости)

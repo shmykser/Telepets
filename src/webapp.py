@@ -80,7 +80,8 @@ def format_entity_response(entity):
         'required_clicks': entity.get('required_clicks', 1000),
         'clicks_remaining': entity.get('clicks_remaining', 1000),
         'crack_stage': entity.get('crack_stage', None),
-        'hatching_time_remaining': entity.get('time_remaining', 0) if entity['state'] == 'hatching' else None
+        'hatching_time_remaining': entity.get('time_remaining', 0) if entity['state'] == 'hatching' else None,
+        'hatching_start_time': entity.get('hatching_start_time', None)
     }
 
 @app.route('/api/egg/<int:user_id>', methods=['GET'])
