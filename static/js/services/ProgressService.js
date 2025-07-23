@@ -74,6 +74,12 @@ class ProgressService {
             // Сохраняем данные для автоматического обновления
             this.currentEggData = data;
             
+            // Принудительно останавливаем автоматическое обновление для мертвого состояния
+            if (data.state === 'dead') {
+                this.stopAutoProgressUpdate();
+                this.logger.info('💀 Мертвое состояние, остановка автоматического обновления прогресса');
+            }
+            
             // Рассчитываем прогресс в зависимости от состояния
             const progressData = this.calculateProgress(data);
             
@@ -335,6 +341,12 @@ class ProgressService {
      * @param {Object} data - Данные яйца
      */
     handleAutoProgressUpdate(data) {
+        // Останавливаем автоматическое обновление для мертвого состояния
+        if (data.state === 'dead') {
+            this.stopAutoProgressUpdate();
+            return;
+        }
+        
         if (data.state === 'incubating' && data.time_remaining > 0) {
             this.startAutoProgressUpdate(data);
         } else {
@@ -377,6 +389,12 @@ class ProgressService {
      */
     updateProgressInRealTime() {
         if (!this.currentEggData || this.currentEggData.state !== 'incubating') {
+            return;
+        }
+        
+        // Дополнительная проверка на мертвое состояние
+        if (this.currentEggData.state === 'dead') {
+            this.stopAutoProgressUpdate();
             return;
         }
 

@@ -205,7 +205,4 @@ def can_transition(entity_type: EntityType, from_state: str, to_state: str, tran
     if transition_type == "auto":
         return to_state in config.auto_transitions.values()
     else:
-        return to_state in config.manual_transitions
-
-# Импортируем константы из основного файла настроек
-from config.settings import HATCHING_CLICKS_REQUIRED, HATCHING_TIME_LIMIT 
+        return to_state in config.manual_transitions 

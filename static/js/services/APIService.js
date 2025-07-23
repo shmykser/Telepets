@@ -18,6 +18,9 @@ class APIService {
      */
     async getEggData() {
         const url = `${this.baseURL}/${this.userId}`;
+        console.log(`🥚 Getting egg data from: ${url}`);
+        console.log(`👤 User ID: ${this.userId}`);
+        console.log(`🔗 Base URL: ${this.baseURL}`);
         return this.fetchWithRetry(url);
     }
 
@@ -155,6 +158,7 @@ class APIService {
 
         for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
             try {
+                console.log(`🔗 Attempt ${attempt}: Fetching ${url}`);
                 const response = await fetch(url, {
                     ...options,
                     headers: {
@@ -163,22 +167,30 @@ class APIService {
                     }
                 });
 
+                console.log(`📡 Response status: ${response.status}`);
+                
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                return await response.json();
+                const data = await response.json();
+                console.log(`✅ Fetch successful:`, data);
+                return data;
 
             } catch (error) {
+                console.error(`❌ Attempt ${attempt} failed:`, error);
                 lastError = error;
                 
                 if (attempt < this.retryAttempts) {
+                    console.log(`⏳ Waiting ${this.retryDelay * attempt}ms before retry...`);
                     await this.delay(this.retryDelay * attempt);
                 }
             }
         }
 
-        throw new Error(`Failed after ${this.retryAttempts} attempts: ${lastError.message}`);
+        const finalError = `Failed after ${this.retryAttempts} attempts: ${lastError.message}`;
+        console.error(`💥 All attempts failed:`, finalError);
+        throw new Error(finalError);
     }
 
     /**

@@ -16,8 +16,7 @@ from config.settings import (
     # Температурные настройки
     CRITICAL_LOW_TEMP, CRITICAL_HIGH_TEMP,
     DEAD_LOW_TEMP, DEAD_HIGH_TEMP,
-    NORMAL_TEMP_MIN, NORMAL_TEMP_MAX,
-    MIN_TEMP, MAX_TEMP
+    START_TEMP
 )
 from config.messages import get_entity_state_message
 
@@ -121,7 +120,7 @@ class EntityStateService:
     def _check_egg_transitions(entity_data: Dict[str, Any], config) -> Optional[str]:
         """Проверить переходы состояний для яйца"""
         current_state = entity_data.get('state', 'incubating')
-        temperature = entity_data.get('temperature', 37)
+        temperature = entity_data.get('temperature', START_TEMP)
         
         # Проверка смерти от температуры (только в состоянии инкубации)
         if current_state == 'incubating':
@@ -340,7 +339,7 @@ class EntityStateService:
         Returns:
             Dict с информацией о статусе температуры
         """
-        temperature = entity_data.get('temperature', 37)
+        temperature = entity_data.get('temperature', START_TEMP)
         current_state = entity_data.get('state', 'incubating')
         
         status = {
@@ -368,24 +367,8 @@ class EntityStateService:
                 'requires_action': True
             })
         
-        # Проверка критических температур (только если не смертельные)
-        elif temperature <= CRITICAL_LOW_TEMP:
-            status.update({
-                'status': 'critical_cold',
-                'message': f'❄️ Очень холодно! Температура: {temperature}°C. Свайпайте для нагрева!',
-                'is_critical': True,
-                'requires_action': True
-            })
-        elif temperature >= CRITICAL_HIGH_TEMP:
-            status.update({
-                'status': 'critical_hot',
-                'message': f'🌡️ Очень горячо! Температура: {temperature}°C',
-                'is_critical': True,
-                'requires_action': True
-            })
-        
-        # Проверка нормальных температур
-        elif NORMAL_TEMP_MIN <= temperature <= NORMAL_TEMP_MAX:
+        # Проверка нормальных температур (между критическими значениями)
+        elif CRITICAL_LOW_TEMP < temperature < CRITICAL_HIGH_TEMP:
             status.update({
                 'status': 'normal',
                 'message': f'✅ Нормальная температура: {temperature}°C',
@@ -395,14 +378,14 @@ class EntityStateService:
             })
         
         # Проверка граничных температур (между нормальной и критической)
-        elif temperature < NORMAL_TEMP_MIN:
+        elif temperature <= CRITICAL_LOW_TEMP:
             status.update({
                 'status': 'low',
                 'message': f'🌡️ Прохладно: {temperature}°C',
                 'is_critical': False,
                 'requires_action': False
             })
-        elif temperature > NORMAL_TEMP_MAX:
+        elif temperature >= CRITICAL_HIGH_TEMP:
             status.update({
                 'status': 'high',
                 'message': f'🌡️ Тепло: {temperature}°C',

@@ -21,9 +21,7 @@ window.initServices = async function() {
         if (window.TelegramService) {
             window.telegramService = new window.TelegramService();
         }
-        if (window.APIService) {
-            window.apiService = null; // Будет инициализирован после получения userId
-        }
+        // APIService будет инициализирован после получения userId
         
         // Инициализируем Telegram Service
         if (window.telegramService) {
@@ -33,7 +31,15 @@ window.initServices = async function() {
         // Получаем userId и инициализируем API Service
         if (window.telegramService && window.APIService) {
             const userId = window.telegramService.getUserId();
+            console.log('Using test user ID:', userId);
             window.apiService = new window.APIService(userId);
+            console.log('✅ APIService initialized:', !!window.apiService);
+        } else {
+            console.error('❌ Required services not available:', {
+                telegramService: !!window.telegramService,
+                APIService: !!window.APIService
+            });
+            throw new Error('Required services not available');
         }
         
         // Инициализируем Egg Service (если доступен)
@@ -46,12 +52,18 @@ window.initServices = async function() {
             window.progressService.initialize();
         }
         
+        // Инициализируем SwipeWarm Service (если доступен)
+        if (window.swipeWarmService) {
+            window.swipeWarmService.initialize();
+        }
+        
         console.log('✅ Сервисы инициализированы успешно');
         return { 
             telegramService: window.telegramService, 
             apiService: window.apiService,
             eggService: window.eggService,
-            progressService: window.progressService
+            progressService: window.progressService,
+            swipeWarmService: window.swipeWarmService
         };
     } catch (error) {
         console.error('❌ Ошибка инициализации сервисов:', error);

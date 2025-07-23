@@ -24,7 +24,7 @@ const FINAL_INCUBATION_TIME = 600;
 // ========================================
 
 // Количество кликов, необходимых для вылупления
-const HATCHING_CLICKS_REQUIRED = 100;
+const HATCHING_CLICKS_REQUIRED = 10000;
 
 // Максимальное время на вылупление (в секундах)
 const HATCHING_TIME_LIMIT = 600; // 10 минут
@@ -33,20 +33,29 @@ const HATCHING_TIME_LIMIT = 600; // 10 минут
 const CRACK_STAGES = {"100": "small_crack", "300": "medium_crack", "600": "large_crack", "900": "breaking"};
 
 // ========================================
-// НАСТРОЙКИ СВАЙПОВ И ВЗАИМОДЕЙСТВИЯ
+// НАСТРОЙКИ СВАЙПОВ И СИСТЕМЫ ПОДОГРЕВА
 // ========================================
 
-// Размер свайпа (в процентах от ширины яйца)
-const SWIPE_THRESHOLD_PERCENT = 50; // 50% = 150px при ширине яйца 300px
-
 // Количество свайпов для нагрева на 1 градус
-const SWIPES_PER_DEGREE = 50;
+const SWIPES_PER_DEGREE = 3;
+
+// Порог расстояния для засчитывания свайпа (в пикселях)
+const SWIPE_THRESHOLD_PIXELS = 50;
 
 // Время сброса счетчика свайпов (в миллисекундах)
 const SWIPE_RESET_TIME = 3000; // 3 секунды
 
 // Скорость уменьшения прогресса свайпов (в миллисекундах)
 const PROGRESS_DECAY_TIME = 400; // 0.4 секунды
+
+// Длительность анимации свайпа (в миллисекундах)
+const SWIPE_ANIMATION_DURATION = 300;
+
+// Максимальное количество свайпов для одного нагрева
+const MAX_SWIPES_PER_WARM = 10;
+
+// Интервал между нагревами (в миллисекундах)
+const WARM_COOLDOWN_TIME = 2000; // 2 секунды
 
 // ========================================
 // НАСТРОЙКИ ТЕМПЕРАТУРЫ
@@ -65,8 +74,7 @@ const DEAD_LOW_TEMP = 18;
 const DEAD_HIGH_TEMP = 48;
 
 // Нормальная температура для инкубации
-const NORMAL_TEMP_MIN = 26;
-const NORMAL_TEMP_MAX = 37;
+const START_TEMP = 30;
 
 // ========================================
 // НАСТРОЙКИ ВРЕМЕНИ
@@ -89,14 +97,10 @@ const TIMER_UPDATE_INTERVAL = 1000; // 1 секунда
 // ========================================
 
 // Ширина яйца в пикселях
-const EGG_WIDTH = 300;  // Увеличено на 50%
+const EGG_WIDTH = 300;
 
 // Высота яйца в пикселях
-const EGG_HEIGHT = 375; // Увеличено на 50%
-
-// Размер шкалы прогресса свайпов
-const PROGRESS_BAR_WIDTH = 300;  // Увеличено на 50% для соответствия яйцу
-const PROGRESS_BAR_HEIGHT = 8;
+const EGG_HEIGHT = 375;
 
 // ========================================
 // НАСТРОЙКИ АНИМАЦИЙ
@@ -104,9 +108,6 @@ const PROGRESS_BAR_HEIGHT = 8;
 
 // Длительность анимации нагрева (в миллисекундах)
 const WARMING_ANIMATION_DURATION = 500;
-
-// Длительность анимации трения (в миллисекундах)
-const RUBBING_ANIMATION_DURATION = 300;
 
 // Длительность анимации +1°C (в миллисекундах)
 const TEMP_INCREASE_ANIMATION_DURATION = 1000;
@@ -124,9 +125,6 @@ const DEBUG_MODE = true;
 // ========================================
 // ВЫЧИСЛЯЕМЫЕ НАСТРОЙКИ
 // ========================================
-
-// Размер свайпа в пикселях
-const SWIPE_THRESHOLD_PIXELS = EGG_WIDTH * (SWIPE_THRESHOLD_PERCENT / 100);
 
 // Время инкубации с учетом быстрого режима
 const FINAL_INCUBATION_TIME_SECONDS = FAST_MODE ? 

@@ -15,6 +15,7 @@ from src.entity_db import (
 )
 from src.services.entity_state_service import EntityStateService
 from config.entity_states import get_valid_states, EntityType
+from config.settings import START_TEMP
 import os
 
 # Получаем корневую директорию проекта
@@ -67,7 +68,7 @@ def format_entity_response(entity):
         'user_id': entity['user_id'],
         'entity_type': entity['entity_type'],
         'state': entity['state'],
-        'temperature': entity.get('temperature', 37),
+        'temperature': entity.get('temperature', START_TEMP),
         'progress': entity.get('progress', 0),
         'time_remaining': entity.get('time_remaining', 0),
         'formatted_time_remaining': entity.get('formatted_time', '0:00'),

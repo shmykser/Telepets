@@ -11,10 +11,12 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 import json
 
-from config.settings import DATABASE_PATH, TEST_MODE, AUTO_CREATE_TEST_EGG, TEST_USER_ID, FINAL_INCUBATION_TIME
+from config.settings import (
+    DATABASE_PATH, TEST_MODE, AUTO_CREATE_TEST_EGG, TEST_USER_ID, 
+    FINAL_INCUBATION_TIME, START_TEMP, HATCHING_CLICKS_REQUIRED, HATCHING_TIME_LIMIT
+)
 
 from config.entity_states import EntityType, EggState, get_valid_states
-from config.settings import HATCHING_CLICKS_REQUIRED, HATCHING_TIME_LIMIT
 from src.services.entity_state_service import EntityStateService
 
 @contextmanager
@@ -39,28 +41,23 @@ def init_entity_db():
         c = conn.cursor()
         
         # Создание новой таблицы entities
-        c.execute('''
+        create_table_sql = f"""
             CREATE TABLE IF NOT EXISTS entities (
                 user_id INTEGER PRIMARY KEY,
                 entity_type TEXT NOT NULL DEFAULT 'egg',
                 state TEXT NOT NULL DEFAULT 'incubating',
                 start_time TEXT,
                 last_touch_time TEXT,
-                temperature INTEGER DEFAULT 37,
+                temperature INTEGER DEFAULT {START_TEMP},
                 progress REAL DEFAULT 0,
-                
-                -- Данные для вылупления
                 hatching_clicks INTEGER DEFAULT 0,
                 hatching_start_time TEXT,
-                
-                -- JSON для специфичных данных состояния
-                state_data TEXT DEFAULT '{}',
-                
-                -- Метаданные
+                state_data TEXT DEFAULT '{{}}',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
-        ''')
+        """
+        c.execute(create_table_sql)
         conn.commit()
         
         # Миграция данных из старой таблицы eggs (если существует)
@@ -104,7 +101,7 @@ def migrate_from_old_schema(conn):
                 'state': new_state,
                 'start_time': row[2] if len(row) > 2 else None,
                 'last_touch_time': row[4] if len(row) > 4 else None,
-                'temperature': row[5] if len(row) > 5 else 37,
+                'temperature': row[5] if len(row) > 5 else START_TEMP,
                 'progress': row[6] if len(row) > 6 else 0,
                 'hatching_clicks': row[7] if len(row) > 7 else 0,
                 'hatching_start_time': row[8] if len(row) > 8 else None,
@@ -165,7 +162,7 @@ def create_test_entity():
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 TEST_USER_ID, 'egg', 'incubating', now, now, 
-                37, 0, '{}', now, now
+                START_TEMP, 0, '{}', now, now
             ))
             conn.commit()
             print(f"✅ Тестовая сущность создана для пользователя {TEST_USER_ID}")
@@ -285,7 +282,7 @@ def transition_entity_state(user_id: int, new_state: str, auto: bool = False) ->
             update_data.update({
                 'start_time': now,
                 'last_touch_time': now,
-                'temperature': 37,
+                'temperature': START_TEMP,
                 'progress': 0,
                 'hatching_clicks': 0,
                 'hatching_start_time': None,
@@ -302,25 +299,63 @@ def transition_entity_state(user_id: int, new_state: str, auto: bool = False) ->
         # Возвращаем обновленные данные БЕЗ рекурсивного вызова get_entity
         return _get_entity_raw(user_id)
 
+# --- Модель и функции для очереди событий уведомлений ---
+from datetime import datetime
+import json
+
+def add_notification_event(user_id: int, event_type: str, params: dict = None):
+    """Добавить событие в очередь уведомлений"""
+    with get_connection() as conn:
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS notification_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                event_type TEXT NOT NULL,
+                params TEXT,
+                created_at TEXT NOT NULL,
+                processed INTEGER DEFAULT 0,
+                processed_at TEXT
+            )
+        ''')
+        c.execute('''
+            INSERT INTO notification_events (user_id, event_type, params, created_at, processed)
+            VALUES (?, ?, ?, ?, 0)
+        ''', (user_id, event_type, json.dumps(params or {}), datetime.utcnow().isoformat()))
+        conn.commit()
+
+LOW_TEMP_THRESHOLD = 20
+
+def check_and_generate_low_temp_event(user_id: int, temperature: float):
+    if temperature < LOW_TEMP_THRESHOLD:
+        add_notification_event(user_id, 'low_temperature', {'temperature': temperature})
+
+# --- Модификация update_entity_temperature ---
+
 def update_entity_temperature(user_id: int, delta: int = 1) -> bool:
     """Обновить температуру сущности (для свайпов)"""
     with get_connection() as conn:
         c = conn.cursor()
         now = datetime.utcnow().isoformat()
-        
+        # Получаем текущую температуру
+        c.execute('SELECT temperature FROM entities WHERE user_id = ? AND state = "incubating"', (user_id,))
+        row = c.fetchone()
+        if not row:
+            return False
+        old_temp = row[0]
+        # Считаем новую температуру
+        new_temp = max(1, min(50, old_temp + delta))
         c.execute('''
             UPDATE entities 
-            SET temperature = CASE 
-                WHEN temperature + ? > 50 THEN 50
-                WHEN temperature + ? < 1 THEN 1
-                ELSE temperature + ?
-            END,
-            last_touch_time = ?,
-            updated_at = ?
+            SET temperature = ?, last_touch_time = ?, updated_at = ?
             WHERE user_id = ? AND state = 'incubating'
-        ''', (delta, delta, delta, now, now, user_id))
-        
+        ''', (new_temp, now, now, user_id))
+        conn.commit()
+        # Генерируем событие, если температура стала критически низкой
+        check_and_generate_low_temp_event(user_id, new_temp)
         return c.rowcount > 0
+
+# --- Модификация apply_cooling_to_entity ---
 
 def apply_cooling_to_entity(user_id: int) -> bool:
     """
@@ -328,48 +363,34 @@ def apply_cooling_to_entity(user_id: int) -> bool:
     Работает только в состоянии incubating
     """
     from config.settings import COOLING_INTERVAL_SECONDS, COOLING_DEGREES_PER_INTERVAL
-    
     with get_connection() as conn:
         c = conn.cursor()
         now = datetime.utcnow()
-        
-        # Получаем текущие данные яйца
         c.execute('''
             SELECT temperature, last_touch_time, state 
             FROM entities 
             WHERE user_id = ?
         ''', (user_id,))
-        
         row = c.fetchone()
         if not row:
             return False
-            
         temperature, last_touch_time_str, state = row
-        
-        # Охлаждение работает только в состоянии incubating
         if state != 'incubating':
             return False
-        
-        # Проверяем, прошло ли достаточно времени с последнего прикосновения
         if last_touch_time_str:
             last_touch_time = datetime.fromisoformat(last_touch_time_str)
             time_since_touch = (now - last_touch_time).total_seconds()
-            
-            # Если прошло больше интервала охлаждения, применяем охлаждение
             if time_since_touch >= COOLING_INTERVAL_SECONDS:
-                # Применяем только одно охлаждение за раз (не накапливаем)
                 new_temperature = max(1, temperature - COOLING_DEGREES_PER_INTERVAL)
-                
-                # Обновляем температуру и сбрасываем last_touch_time
                 c.execute('''
                     UPDATE entities 
                     SET temperature = ?, last_touch_time = ?, updated_at = ?
                     WHERE user_id = ?
                 ''', (new_temperature, now.isoformat(), now.isoformat(), user_id))
-                
                 conn.commit()
+                # Генерируем событие, если температура стала критически низкой
+                check_and_generate_low_temp_event(user_id, new_temperature)
                 return True
-        
         return False
 
 def increment_hatching_clicks(user_id: int) -> Dict[str, Any]:

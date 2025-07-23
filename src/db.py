@@ -9,10 +9,10 @@ from contextlib import contextmanager
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from config.settings import (
-    DATABASE_PATH, TEST_MODE, AUTO_CREATE_TEST_EGG, TEST_USER_ID, FINAL_INCUBATION_TIME,
-    CRACK_STAGES
+    DATABASE_PATH, TEST_MODE, AUTO_CREATE_TEST_EGG, TEST_USER_ID,
+    FINAL_INCUBATION_TIME, HATCHING_CLICKS_REQUIRED, HATCHING_TIME_LIMIT,
+    CRACK_STAGES, START_TEMP
 )
-from config.settings import HATCHING_CLICKS_REQUIRED, HATCHING_TIME_LIMIT
 from config.messages import get_message
 
 def get_connection():
@@ -33,14 +33,14 @@ def init_db():
                 current_stage TEXT DEFAULT 'egg'
             )
         ''')
-        c.execute('''
+        c.execute(f'''
             CREATE TABLE IF NOT EXISTS eggs (
                 user_id INTEGER PRIMARY KEY,
                 egg_type TEXT,
                 start_time TEXT,
                 status TEXT,
                 last_touch_time TEXT,
-                temperature INTEGER DEFAULT 37,
+                temperature INTEGER DEFAULT {START_TEMP},
                 progress REAL DEFAULT 0,
                 hatching_clicks INTEGER DEFAULT 0,
                 hatching_start_time TEXT
@@ -98,8 +98,8 @@ def add_egg(user_id, egg_type='basic', status='инкубация'):
         now = datetime.utcnow().isoformat()
         c.execute('''
             INSERT INTO eggs (user_id, egg_type, start_time, status, last_touch_time, temperature, progress)
-            VALUES (?, ?, ?, ?, ?, 37, 0)
-        ''', (user_id, egg_type, now, status, now))
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+        ''', (user_id, egg_type, now, status, now, START_TEMP))
         conn.commit()
 
 def get_egg(user_id):
@@ -208,10 +208,10 @@ def reset_egg(user_id):
                 start_time = ?,
                 status = 'инкубация',
                 last_touch_time = ?,
-                temperature = 37,
+                temperature = ?,
                 progress = 0
             WHERE user_id = ?
-        ''', (now, now, user_id))
+        ''', (now, now, START_TEMP, user_id))
         conn.commit()
         return True
 

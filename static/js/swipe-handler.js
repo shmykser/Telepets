@@ -1,6 +1,7 @@
 /**
  * Универсальный обработчик свайпов для Telegram WebApp
  * Поддерживает различные элементы и конфигурации
+ * Новая система: непрерывное отслеживание без отрыва пальца
  */
 
 class SwipeHandler {
@@ -8,12 +9,10 @@ class SwipeHandler {
         this.handlers = new Map(); // Регистр обработчиков для разных элементов
         this.activeHandlers = new Set(); // Активные обработчики
         this.defaultConfig = {
-            threshold: 150, // SWIPE_THRESHOLD_PIXELS || 150,
-            decayTime: 400, // PROGRESS_DECAY_TIME || 400,
-            animationDuration: 300, // RUBBING_ANIMATION_DURATION || 300,
+            pixelsPerDegree: 1000, // 1000 пикселей = +1 градус
             enableProgress: true,
-            enableDecay: true,
-            enableAnimation: true
+            enableAnimation: true,
+            enableContinuous: true // Непрерывное отслеживание
         };
     }
 
@@ -21,8 +20,8 @@ class SwipeHandler {
      * Регистрация обработчика свайпов для элемента
      * @param {string} elementId - ID элемента
      * @param {Object} config - Конфигурация
-     * @param {Function} onSwipe - Callback при свайпе
-     * @param {Function} onComplete - Callback при завершении
+     * @param {Function} onSwipe - Callback при свайпе (вызывается при каждом градусе)
+     * @param {Function} onComplete - Callback при завершении (не используется в новой системе)
      */
     register(elementId, config = {}, onSwipe = null, onComplete = null) {
         const handler = {
@@ -30,11 +29,11 @@ class SwipeHandler {
             config: { ...this.defaultConfig, ...config },
             onSwipe,
             onComplete,
-            swipeCount: 0,
+            totalPixels: 0, // Общее количество пикселей
+            degreesEarned: 0, // Количество заработанных градусов
             isSwiping: false,
             startX: 0,
             startY: 0,
-            totalDistance: 0,
             lastX: 0,
             lastY: 0,
             progressDecayTimer: null
@@ -81,11 +80,21 @@ class SwipeHandler {
         
         e.preventDefault();
         const touch = e.touches[0];
+        
+        // Если уже свайпаем, продолжаем с текущими счетчиками
+        if (handler.isSwiping) {
+            handler.lastX = touch.clientX;
+            handler.lastY = touch.clientY;
+            return;
+        }
+        
+        // Только при новом свайпе сбрасываем счетчики
         handler.startX = touch.clientX;
         handler.startY = touch.clientY;
         handler.lastX = handler.startX;
         handler.lastY = handler.startY;
-        handler.totalDistance = 0;
+        handler.totalPixels = 0;
+        handler.degreesEarned = 0;
         handler.isSwiping = true;
         this.resetProgressDecayTimer(handler);
         
@@ -116,7 +125,6 @@ class SwipeHandler {
      */
     handleTouchEnd(e, handler) {
         handler.isSwiping = false;
-        handler.totalDistance = 0;
         this.startProgressDecayTimer(handler);
         
         // Скрываем прогресс свайпа через небольшую задержку
@@ -134,11 +142,21 @@ class SwipeHandler {
         if (this.shouldSkipSwipe(handler)) return;
         
         e.preventDefault();
+        
+        // Если уже свайпаем, продолжаем с текущими счетчиками
+        if (handler.isSwiping) {
+            handler.lastX = e.clientX;
+            handler.lastY = e.clientY;
+            return;
+        }
+        
+        // Только при новом свайпе сбрасываем счетчики
         handler.startX = e.clientX;
         handler.startY = e.clientY;
         handler.lastX = handler.startX;
         handler.lastY = handler.startY;
-        handler.totalDistance = 0;
+        handler.totalPixels = 0;
+        handler.degreesEarned = 0;
         handler.isSwiping = true;
         this.resetProgressDecayTimer(handler);
     }
@@ -162,7 +180,6 @@ class SwipeHandler {
      */
     handleMouseUp(e, handler) {
         handler.isSwiping = false;
-        handler.totalDistance = 0;
         this.startProgressDecayTimer(handler);
         
         // Скрываем прогресс свайпа через небольшую задержку
@@ -182,25 +199,25 @@ class SwipeHandler {
         const deltaY = Math.abs(currentY - handler.lastY);
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         
-        handler.totalDistance += distance;
+        handler.totalPixels += distance;
         handler.lastX = currentX;
         handler.lastY = currentY;
         
-        if (handler.totalDistance >= handler.config.threshold) {
-            this.handleSwipe(handler);
-            handler.totalDistance = 0;
+        // Проверяем, заработали ли новый градус
+        const newDegreesEarned = Math.floor(handler.totalPixels / handler.config.pixelsPerDegree);
+        if (newDegreesEarned > handler.degreesEarned) {
+            handler.degreesEarned = newDegreesEarned;
+            this.handleDegreeEarned(handler);
         }
         
         this.resetProgressDecayTimer(handler);
     }
 
     /**
-     * Обработка свайпа
+     * Обработка заработанного градуса
      * @param {Object} handler - Обработчик
      */
-    handleSwipe(handler) {
-        handler.swipeCount++;
-        
+    handleDegreeEarned(handler) {
         // Обновляем прогресс если включен
         if (handler.config.enableProgress) {
             this.updateSwipeProgress(handler);
@@ -213,16 +230,13 @@ class SwipeHandler {
         
         // Вызываем callback
         if (handler.onSwipe) {
-            handler.onSwipe(handler.swipeCount, handler);
+            handler.onSwipe(handler.degreesEarned, handler);
         }
         
-        // Проверяем завершение
-        if (handler.onComplete && handler.config.completeThreshold && 
-            handler.swipeCount >= handler.config.completeThreshold) {
-            handler.onComplete(handler.swipeCount, handler);
-            handler.swipeCount = 0;
-            this.updateSwipeProgress(handler);
-        }
+        console.log(`[SwipeHandler] Заработан градус: ${handler.degreesEarned} (${handler.totalPixels}px)`);
+        
+        // НЕ сбрасываем totalPixels - продолжаем отслеживать непрерывно
+        // Это позволяет получать градусы без отрыва пальца
     }
 
     /**
@@ -248,36 +262,52 @@ class SwipeHandler {
     updateSwipeProgress(handler) {
         const element = document.getElementById(handler.elementId);
         if (!element) return;
+
+        // Для яйца: добавлять прогресс-бар в .egg-container, а не внутрь .egg
+        let progressContainer;
+        let parent;
+        if (handler.elementId === 'egg' && element.parentElement && element.parentElement.classList.contains('egg-container')) {
+            parent = element.parentElement;
+        } else {
+            parent = element;
+        }
+
+        progressContainer = parent.querySelector('.swipe-progress-container');
+        if (!progressContainer) {
+            progressContainer = document.createElement('div');
+            progressContainer.className = 'swipe-progress-container';
+            progressContainer.innerHTML = `
+                <div class="swipe-progress-fill"></div>
+                <div class="swipe-progress-text">0°C</div>
+            `;
+            parent.appendChild(progressContainer);
+        }
+
+        const fillElement = progressContainer.querySelector('.swipe-progress-fill');
+        const textElement = progressContainer.querySelector('.swipe-progress-text');
         
-        // Ищем прогресс-бар для данного элемента
-        const progressContainer = element.querySelector('.swipe-progress-container');
-        const fillElement = element.querySelector('.swipe-progress-fill');
-        const textElement = element.querySelector('.swipe-progress-text');
-        
-        if (progressContainer && fillElement && textElement && handler.config.completeThreshold) {
-            const progressPercent = (handler.swipeCount / handler.config.completeThreshold) * 100;
-            fillElement.style.width = `${progressPercent}%`;
-            textElement.textContent = `Прогресс: ${Math.round(progressPercent)}%`;
+        if (fillElement && textElement) {
+            // Показываем количество заработанных градусов
+            textElement.textContent = `+${handler.degreesEarned}°C`;
             
-            // Показываем прогресс-бар при активном свайпе
-            if (handler.swipeCount > 0) {
-                progressContainer.classList.add('active');
-            }
+            // Показываем прогресс к следующему градусу
+            const progressToNext = (handler.totalPixels % handler.config.pixelsPerDegree) / handler.config.pixelsPerDegree;
+            fillElement.style.width = `${progressToNext * 100}%`;
         }
     }
 
     /**
-     * Воспроизведение анимации свайпа
+     * Анимация свайпа
      * @param {Object} handler - Обработчик
      */
     playSwipeAnimation(handler) {
         const element = document.getElementById(handler.elementId);
         if (!element) return;
-        
-        element.classList.add('rubbing');
+
+        element.classList.add('swiping');
         setTimeout(() => {
-            element.classList.remove('rubbing');
-        }, handler.config.animationDuration);
+            element.classList.remove('swiping');
+        }, 200);
     }
 
     /**
@@ -287,7 +317,6 @@ class SwipeHandler {
     resetProgressDecayTimer(handler) {
         if (handler.progressDecayTimer) {
             clearTimeout(handler.progressDecayTimer);
-            handler.progressDecayTimer = null;
         }
     }
 
@@ -296,23 +325,15 @@ class SwipeHandler {
      * @param {Object} handler - Обработчик
      */
     startProgressDecayTimer(handler) {
-        if (!handler.config.enableDecay) return;
-        
         this.resetProgressDecayTimer(handler);
+        
         handler.progressDecayTimer = setTimeout(() => {
-            if (handler.swipeCount > 0) {
-                handler.swipeCount = Math.max(0, handler.swipeCount - 1);
-                this.updateSwipeProgress(handler);
-                
-                if (handler.swipeCount > 0) {
-                    this.startProgressDecayTimer(handler);
-                }
-            }
-        }, handler.config.decayTime);
+            this.hideSwipeProgress(handler);
+        }, 2000);
     }
 
     /**
-     * Удаление обработчика
+     * Отмена регистрации обработчика
      * @param {string} elementId - ID элемента
      */
     unregister(elementId) {
@@ -320,7 +341,7 @@ class SwipeHandler {
         if (handler) {
             this.activeHandlers.delete(handler);
             this.handlers.delete(elementId);
-            console.log(`[SwipeHandler] Удален обработчик для ${elementId}`);
+            console.log(`[SwipeHandler] Обработчик для ${elementId} отменен`);
         }
     }
 
@@ -331,8 +352,8 @@ class SwipeHandler {
     showSwipeProgress(handler) {
         const element = document.getElementById(handler.elementId);
         if (!element) return;
-        
-        const progressContainer = element.querySelector('.swipe-progress-container');
+
+        let progressContainer = element.querySelector('.swipe-progress-container');
         if (progressContainer) {
             progressContainer.classList.add('active');
         }
@@ -345,15 +366,10 @@ class SwipeHandler {
     hideSwipeProgress(handler) {
         const element = document.getElementById(handler.elementId);
         if (!element) return;
-        
-        const progressContainer = element.querySelector('.swipe-progress-container');
+
+        let progressContainer = element.querySelector('.swipe-progress-container');
         if (progressContainer) {
-            // Скрываем прогресс только если нет активных свайпов
-            setTimeout(() => {
-                if (handler.swipeCount === 0) {
-                    progressContainer.classList.remove('active');
-                }
-            }, 2000); // Скрываем через 2 секунды после последнего свайпа
+            progressContainer.classList.remove('active');
         }
     }
 
@@ -362,11 +378,21 @@ class SwipeHandler {
      * @returns {Object}
      */
     getStats() {
-        return {
+        const stats = {
             totalHandlers: this.handlers.size,
             activeHandlers: this.activeHandlers.size,
-            handlers: Array.from(this.handlers.keys())
+            handlers: {}
         };
+
+        for (const [elementId, handler] of this.handlers) {
+            stats.handlers[elementId] = {
+                totalPixels: handler.totalPixels,
+                degreesEarned: handler.degreesEarned,
+                isSwiping: handler.isSwiping
+            };
+        }
+
+        return stats;
     }
 }
 

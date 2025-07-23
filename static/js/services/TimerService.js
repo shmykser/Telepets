@@ -19,6 +19,17 @@ class TimerService {
     }
 
     /**
+     * Инициализация сервиса
+     */
+    initialize() {
+        console.log('[TimerService] TimerService initialized');
+        // Останавливаем любой существующий таймер
+        this.stopTimer();
+        // Сбрасываем состояние
+        this.reset();
+    }
+
+    /**
      * Подписка на события таймера
      * @param {string} event - Тип события ('expired', 'critical', 'sync')
      * @param {Function} callback - Функция обратного вызова

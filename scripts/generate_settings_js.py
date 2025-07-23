@@ -23,18 +23,18 @@ def generate_settings_js():
         
         # Температурные параметры
         CRITICAL_LOW_TEMP, CRITICAL_HIGH_TEMP, DEAD_LOW_TEMP, DEAD_HIGH_TEMP,
-        MAX_TEMP, MIN_TEMP, NORMAL_TEMP_MIN, NORMAL_TEMP_MAX,
+        START_TEMP,
         
-        # Охлаждение и нагрев
+        # Охлаждение
         COOLING_INTERVAL_SECONDS, COOLING_DEGREES_PER_INTERVAL,
-        WARMING_DEGREES_PER_RUB,
         
-        # Свайпы и взаимодействие
-        SWIPE_THRESHOLD_PERCENT, SWIPES_PER_DEGREE, SWIPE_RESET_TIME, PROGRESS_DECAY_TIME,
+        # Свайпы и система подогрева
+        SWIPES_PER_DEGREE, SWIPE_THRESHOLD_PIXELS, SWIPE_RESET_TIME, PROGRESS_DECAY_TIME,
+        SWIPE_ANIMATION_DURATION, MAX_SWIPES_PER_WARM, WARM_COOLDOWN_TIME,
         
         # UI/Анимации/Визуализация
-        EGG_WIDTH, EGG_HEIGHT, PROGRESS_BAR_WIDTH, PROGRESS_BAR_HEIGHT,
-        WARMING_ANIMATION_DURATION, RUBBING_ANIMATION_DURATION, TEMP_INCREASE_ANIMATION_DURATION,
+        EGG_WIDTH, EGG_HEIGHT,
+        WARMING_ANIMATION_DURATION, TEMP_INCREASE_ANIMATION_DURATION,
         
         # Интервалы
         DATA_UPDATE_INTERVAL, TIMER_UPDATE_INTERVAL,
@@ -43,7 +43,7 @@ def generate_settings_js():
         TEST_USER_ID, DEBUG_MODE, TEST_MODE, AUTO_CREATE_TEST_EGG,
         
         # Сообщения (перенесены в NotificationService)
-        # MESSAGES
+        MESSAGES
     )
     
     # Формируем содержимое settings.js
@@ -82,20 +82,29 @@ const HATCHING_TIME_LIMIT = {HATCHING_TIME_LIMIT}; // {HATCHING_TIME_LIMIT // 60
 const CRACK_STAGES = {json.dumps(CRACK_STAGES)};
 
 // ========================================
-// НАСТРОЙКИ СВАЙПОВ И ВЗАИМОДЕЙСТВИЯ
+// НАСТРОЙКИ СВАЙПОВ И СИСТЕМЫ ПОДОГРЕВА
 // ========================================
-
-// Размер свайпа (в процентах от ширины яйца)
-const SWIPE_THRESHOLD_PERCENT = {SWIPE_THRESHOLD_PERCENT}; // {SWIPE_THRESHOLD_PERCENT}% = {SWIPE_THRESHOLD_PERCENT * EGG_WIDTH // 100}px при ширине яйца {EGG_WIDTH}px
 
 // Количество свайпов для нагрева на 1 градус
 const SWIPES_PER_DEGREE = {SWIPES_PER_DEGREE};
+
+// Порог расстояния для засчитывания свайпа (в пикселях)
+const SWIPE_THRESHOLD_PIXELS = {SWIPE_THRESHOLD_PIXELS};
 
 // Время сброса счетчика свайпов (в миллисекундах)
 const SWIPE_RESET_TIME = {SWIPE_RESET_TIME}; // {SWIPE_RESET_TIME // 1000} секунды
 
 // Скорость уменьшения прогресса свайпов (в миллисекундах)
 const PROGRESS_DECAY_TIME = {PROGRESS_DECAY_TIME}; // {PROGRESS_DECAY_TIME / 1000} секунды
+
+// Длительность анимации свайпа (в миллисекундах)
+const SWIPE_ANIMATION_DURATION = {SWIPE_ANIMATION_DURATION};
+
+// Максимальное количество свайпов для одного нагрева
+const MAX_SWIPES_PER_WARM = {MAX_SWIPES_PER_WARM};
+
+// Интервал между нагревами (в миллисекундах)
+const WARM_COOLDOWN_TIME = {WARM_COOLDOWN_TIME}; // {WARM_COOLDOWN_TIME // 1000} секунды
 
 // ========================================
 // НАСТРОЙКИ ТЕМПЕРАТУРЫ
@@ -114,8 +123,7 @@ const DEAD_LOW_TEMP = {DEAD_LOW_TEMP};
 const DEAD_HIGH_TEMP = {DEAD_HIGH_TEMP};
 
 // Нормальная температура для инкубации
-const NORMAL_TEMP_MIN = {NORMAL_TEMP_MIN};
-const NORMAL_TEMP_MAX = {NORMAL_TEMP_MAX};
+const START_TEMP = {START_TEMP};
 
 // ========================================
 // НАСТРОЙКИ ВРЕМЕНИ
@@ -138,14 +146,10 @@ const TIMER_UPDATE_INTERVAL = {TIMER_UPDATE_INTERVAL}; // {TIMER_UPDATE_INTERVAL
 // ========================================
 
 // Ширина яйца в пикселях
-const EGG_WIDTH = {EGG_WIDTH};  // Увеличено на 50%
+const EGG_WIDTH = {EGG_WIDTH};
 
 // Высота яйца в пикселях
-const EGG_HEIGHT = {EGG_HEIGHT}; // Увеличено на 50%
-
-// Размер шкалы прогресса свайпов
-const PROGRESS_BAR_WIDTH = {PROGRESS_BAR_WIDTH};  // Увеличено на 50% для соответствия яйцу
-const PROGRESS_BAR_HEIGHT = {PROGRESS_BAR_HEIGHT};
+const EGG_HEIGHT = {EGG_HEIGHT};
 
 // ========================================
 // НАСТРОЙКИ АНИМАЦИЙ
@@ -153,9 +157,6 @@ const PROGRESS_BAR_HEIGHT = {PROGRESS_BAR_HEIGHT};
 
 // Длительность анимации нагрева (в миллисекундах)
 const WARMING_ANIMATION_DURATION = {WARMING_ANIMATION_DURATION};
-
-// Длительность анимации трения (в миллисекундах)
-const RUBBING_ANIMATION_DURATION = {RUBBING_ANIMATION_DURATION};
 
 // Длительность анимации +1°C (в миллисекундах)
 const TEMP_INCREASE_ANIMATION_DURATION = {TEMP_INCREASE_ANIMATION_DURATION};
@@ -173,9 +174,6 @@ const DEBUG_MODE = {str(DEBUG_MODE).lower()};
 // ========================================
 // ВЫЧИСЛЯЕМЫЕ НАСТРОЙКИ
 // ========================================
-
-// Размер свайпа в пикселях
-const SWIPE_THRESHOLD_PIXELS = EGG_WIDTH * (SWIPE_THRESHOLD_PERCENT / 100);
 
 // Время инкубации с учетом быстрого режима
 const FINAL_INCUBATION_TIME_SECONDS = FAST_MODE ? 

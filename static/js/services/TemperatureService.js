@@ -13,11 +13,17 @@ class TemperatureService {
         this.coolingInterval = null;
         this.lastTouchTime = null;
         this.currentEggData = null;
-        
-        // Проверяем инициализацию
-        setTimeout(() => {
-            console.log('✅ TemperatureService инициализирован');
-        }, 1000);
+    }
+
+    /**
+     * Инициализация сервиса
+     */
+    initialize() {
+        console.log('✅ TemperatureService инициализирован');
+        // Останавливаем охлаждение если оно активно
+        this.stopCooling();
+        // Сбрасываем состояние
+        this.reset();
     }
 
     /**
@@ -101,6 +107,18 @@ class TemperatureService {
     updateEggColor(temperature) {
         const egg = document.getElementById('egg');
         if (!egg) return;
+        
+        // Проверяем состояние яйца - не обновляем цвет если яйцо мертво
+        const currentData = window.currentEggData;
+        if (currentData && currentData.state === 'dead') {
+            // Устанавливаем серый цвет для мертвого яйца
+            egg.style.setProperty('background', 'linear-gradient(135deg, #808080 0%, #696969 50%, #555555 100%)', 'important');
+            document.documentElement.style.setProperty('--egg-background', 'linear-gradient(135deg, #808080 0%, #696969 50%, #555555 100%)');
+            
+            // Принудительно останавливаем все автоматические процессы
+            this.stopCooling();
+            return;
+        }
         
         const newColor = this.getEggColorByTemperature(temperature);
         
@@ -195,7 +213,7 @@ class TemperatureService {
         return {
             isDead: temperature <= DEAD_LOW_TEMP || temperature >= DEAD_HIGH_TEMP,
             isCritical: temperature <= CRITICAL_LOW_TEMP || temperature >= CRITICAL_HIGH_TEMP,
-            isNormal: temperature >= NORMAL_TEMP_MIN && temperature <= NORMAL_TEMP_MAX,
+            isNormal: temperature > CRITICAL_LOW_TEMP && temperature < CRITICAL_HIGH_TEMP,
             isTooLow: temperature < CRITICAL_LOW_TEMP,
             isTooHigh: temperature > CRITICAL_HIGH_TEMP,
             isDeadlyLow: temperature <= DEAD_LOW_TEMP,
@@ -218,25 +236,34 @@ class TemperatureService {
      * @param {number} temperature - Новая температура
      */
     updateTemperatureDisplay(temperature) {
-        // Обновляем все элементы с температурой на странице
-        const tempElements = document.querySelectorAll('[id*="temperature"], [class*="temperature"]');
+        const tempElement = document.getElementById('temperature');
+        if (!tempElement) return;
         
-        tempElements.forEach(element => {
-            if (element.textContent.includes('°C') || element.textContent.includes('🌡️')) {
-                element.textContent = this.formatTemperature(temperature);
-            }
-        });
-        
-        // Также обновляем элементы в основном контейнере яйца
-        const eggContainer = document.querySelector('.egg-container, #egg');
-        if (eggContainer) {
-            const tempInEgg = eggContainer.querySelector('[id*="temperature"], [class*="temperature"]');
-            if (tempInEgg) {
-                tempInEgg.textContent = this.formatTemperature(temperature);
-            }
+        // Проверяем состояние яйца
+        const currentData = window.currentEggData;
+        if (currentData && currentData.state === 'dead') {
+            tempElement.innerHTML = '🌡️ <span class="game-over">Игра окончена</span>';
+            tempElement.className = 'temperature stopped';
+            
+            // Принудительно останавливаем все автоматические процессы
+            this.stopCooling();
+            return;
         }
         
-        console.log(`🌡️ Обновлена температура в интерфейсе: ${this.formatTemperature(temperature)}`);
+        // Форматируем температуру
+        const formattedTemp = this.formatTemperature(temperature);
+        tempElement.innerHTML = `🌡️ ${formattedTemp}`;
+        tempElement.className = 'temperature';
+        
+        // Добавляем цветовую индикацию
+        const status = this.checkTemperatureStatus(temperature);
+        if (status.isDead) {
+            tempElement.classList.add('deadly');
+        } else if (status.isCritical) {
+            tempElement.classList.add('critical');
+        } else if (status.isNormal) {
+            tempElement.classList.add('normal');
+        }
     }
 
     /**
@@ -329,6 +356,12 @@ class TemperatureService {
             return;
         }
         
+        // Дополнительная проверка на мертвое состояние
+        if (this.currentEggData.state === 'dead') {
+            this.stopCooling();
+            return;
+        }
+        
         // Проверяем, прошло ли достаточно времени с последнего прикосновения
         const now = new Date();
         const timeSinceTouch = (now - this.lastTouchTime) / 1000; // в секундах
@@ -356,8 +389,8 @@ class TemperatureService {
                     window.telepetsApp.currentEggData.temperature = newTemperature;
                 }
                 
-                // Обновляем прогресс если есть ProgressService
-                if (window.progressService && this.currentEggData) {
+                // Обновляем прогресс если есть ProgressService и яйцо не мертво
+                if (window.progressService && this.currentEggData && this.currentEggData.state !== 'dead') {
                     window.progressService.updateProgress(this.currentEggData, this.currentEggData.ui_config || {});
                 }
             }

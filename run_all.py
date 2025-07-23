@@ -20,6 +20,11 @@ def run_swagger():
     os.chdir("api-docs")
     subprocess.run([sys.executable, "swagger_server.py", "--no-browser"])
 
+def run_notification_worker():
+    """Запуск Notification Worker"""
+    print("🔔 Запускаю Notification Worker...")
+    subprocess.run([sys.executable, "src/notification_worker.py"])
+
 if __name__ == "__main__":
     print("🚀 Telepets Full Stack Launcher")
     print("=" * 40)
@@ -32,6 +37,10 @@ if __name__ == "__main__":
         # Запускаем Swagger документацию в отдельном потоке
         swagger_thread = threading.Thread(target=run_swagger, daemon=True)
         swagger_thread.start()
+
+        # Запускаем Notification Worker в отдельном потоке
+        notification_thread = threading.Thread(target=run_notification_worker, daemon=True)
+        notification_thread.start()
         
         # Небольшая пауза для запуска сервисов
         time.sleep(3)
